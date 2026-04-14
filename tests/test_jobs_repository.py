@@ -1,7 +1,7 @@
 """
 Unit tests for Job Repository (backend/repositories/jobs.py).
 Tests job filtering and search logic without using real database.
-All dependencies are mocked - no real database used.
+All dependencies are mocked - no real database used
 """
 
 import pytest
@@ -136,18 +136,13 @@ class TestListJobs:
         # Verify join was called for tags
         mock_query.join.assert_called()
 
-    def test_list_jobs_filter_intentionally_fail(self, monkeypatch):
-        """Test intentionally fails to demonstrate test failure."""
-        mock_job = Mock()
-        mock_job.id = 1
-        mock_job.title = "Developer"
-        mock_job.status = "published"
-
+    def test_list_jobs_empty_results(self, monkeypatch):
+        """Test list_jobs returns empty list when no jobs match filter."""
         mock_query = Mock()
         mock_query.filter.return_value = mock_query
         mock_query.options.return_value = mock_query
         mock_query.order_by.return_value = mock_query
-        mock_query.all.return_value = [mock_job]
+        mock_query.all.return_value = []  # Empty results
 
         mock_job_query = Mock()
         mock_job_query.filter.return_value = mock_query
@@ -158,7 +153,6 @@ class TestListJobs:
             lambda: mock_job_query,
         )
 
-        result = list_jobs({})
+        result = list_jobs({"q": "nonexistent_job"})
 
-        # Intentionally wrong assertion to demonstrate test failure
-        assert len(result) == 999  # Should be 1, but we assert 999 to fail
+        assert len(result) == 0  # Empty result when no matches
