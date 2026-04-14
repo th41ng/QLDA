@@ -1,6 +1,8 @@
+from .base import job_tags
 from .application import Application
 from .category import Category
 from .candidate_profile import CandidateProfile
+from .category import Category
 from .company import Company
 from .cv_template import CvTemplate
 from .job_posting import JobPosting
@@ -14,6 +16,7 @@ __all__ = [
     "Application",
     "Category",
     "CandidateProfile",
+    "Category",
     "Company",
     "CvTemplate",
     "JobPosting",
@@ -22,4 +25,5 @@ __all__ = [
     "Resume",
     "Tag",
     "User",
+    "job_tags",
 ]

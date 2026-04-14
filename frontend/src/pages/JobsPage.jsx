@@ -4,7 +4,7 @@ import { api } from "../api";
 import { ROUTES } from "../routes";
 import LandingJobCard from "../components/landing/LandingJobCard";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 6;
 const SORT_OPTIONS = [
   { value: "featured", label: "Nổi bật trước" },
   { value: "newest", label: "Mới nhất" },
@@ -92,11 +92,16 @@ export default function JobsPage() {
   }, [jobs]);
 
   const industryOptions = useMemo(() => {
-    return categories
-      .filter((category) => category?.is_active !== false)
-      .map((category) => ({ value: category.slug, label: category.name }))
-      .sort((left, right) => left.label.localeCompare(right.label));
-  }, [categories]);
+    const map = new Map();
+    jobs.forEach((job) => {
+      (job.tags || []).forEach((tag) => {
+        if (tag.category === "industry" && !map.has(tag.slug)) {
+          map.set(tag.slug, { value: tag.slug, label: tag.name });
+        }
+      });
+    });
+    return [...map.values()].sort((left, right) => left.label.localeCompare(right.label));
+  }, [jobs]);
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -111,7 +116,7 @@ export default function JobsPage() {
       const matchesExperience = !filters.experience || normalizeText(job.experience_level || "").includes(normalizeText(filters.experience));
       const matchesWorkplace = !filters.workplace || normalizeText(job.workplace_type || "").includes(normalizeText(filters.workplace));
       const matchesEmployment = !filters.employment || normalizeText(job.employment_type || "").includes(normalizeText(filters.employment));
-      const matchesIndustry = !filters.industry || (job.tags || []).some((tag) => tag.category === filters.industry);
+      const matchesIndustry = !filters.industry || (job.tags || []).some((tag) => tag.slug === filters.industry && tag.category === "industry");
       const matchesTag = !filters.tag || (job.tags || []).some((tag) => tag.slug === filters.tag);
 
       return matchesQuery && matchesLocation && matchesExperience && matchesWorkplace && matchesEmployment && matchesIndustry && matchesTag;
@@ -141,7 +146,7 @@ export default function JobsPage() {
   const totalPages = Math.max(1, Math.ceil(sortedJobs.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageJobs = sortedJobs.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const activeFilterCount = Object.entries(filters).filter(([key, value]) => key !== "sort" && Boolean(value)).length;
 
   const updateFilter = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
