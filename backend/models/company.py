@@ -17,3 +17,5 @@ class Company(db.Model):
     industry = db.Column(db.String(120))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    jobs = db.relationship("JobPosting", backref="company", cascade="all, delete-orphan")
