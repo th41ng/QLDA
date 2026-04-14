@@ -3,6 +3,7 @@ from datetime import datetime
 from flask_login import UserMixin
 
 from ..core.extensions import db
+from .base import job_tags, resume_tags
 
 
 class User(UserMixin, db.Model):
@@ -24,4 +25,7 @@ class User(UserMixin, db.Model):
 
     candidate_profile = db.relationship("CandidateProfile", backref="user", uselist=False, cascade="all, delete-orphan")
     company = db.relationship("Company", backref="recruiter", uselist=False, cascade="all, delete-orphan")
+    resumes = db.relationship("Resume", backref="user", cascade="all, delete-orphan")
+    jobs = db.relationship("JobPosting", backref="recruiter", cascade="all, delete-orphan")
+    applications = db.relationship("Application", backref="candidate", cascade="all, delete-orphan")
     otp_codes = db.relationship("OtpCode", backref="user", cascade="all, delete-orphan")
