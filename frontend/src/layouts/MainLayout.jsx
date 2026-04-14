@@ -1,6 +1,8 @@
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { AUTH_ACTIONS, FOOTER_LINKS, HEADER_NAV, ROLE_NAV, ROUTES, authRoute } from "../routes";
+import CandidateHeader from "./CandidateHeader";
+import RecruiterHeader from "./RecruiterHeader";
 
 export default function MainLayout({ children }) {
   const { user, logout } = useAuth();
@@ -9,55 +11,76 @@ export default function MainLayout({ children }) {
   const onAuthPage = location.pathname === ROUTES.auth;
   const authMode = onAuthPage && authSearch.get("mode") === "register" ? "register" : "login";
   const authRole = onAuthPage && authSearch.get("role") === "recruiter" ? "recruiter" : "candidate";
+  const useCandidateHeader = user?.role === "candidate";
+  const useRecruiterHeader = user?.role === "recruiter";
   const roleNav = ROLE_NAV[user?.role] || [];
   const headerNav = user ? [...HEADER_NAV, ...roleNav] : HEADER_NAV;
 
   return (
     <div className="app-shell">
-      <header className="topbar topbar--clean">
-        <div className="container topbar-row">
-          <Link className="brand brand--jobportal" to={ROUTES.home} aria-label="JOBPORTAL home">
-            <span className="brand-job">JOB</span>
-            <span className="brand-portal">PORTAL</span>
-          </Link>
+      {useRecruiterHeader ? (
+        <RecruiterHeader />
+      ) : useCandidateHeader ? (
+        <CandidateHeader />
+      ) : (
+        <header className="topbar topbar--clean">
+          <div className="container topbar-row">
+            <Link className="brand brand--jobportal" to={ROUTES.home} aria-label="JOBPORTAL home">
+              <span className="brand-job">JOB</span>
+              <span className="brand-portal">PORTAL</span>
+            </Link>
 
-          <nav className="topbar-nav topbar-nav--main" aria-label="Điều hướng chính">
-            {headerNav.map((item) => (
-              <NavLink key={item.to} to={item.to} className={({ isActive }) => `topbar-link ${isActive ? "topbar-link--active" : ""}`}>
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
+            <nav className="topbar-nav topbar-nav--main" aria-label="Điều hướng chính">
+              {headerNav.map((item) => {
+                const isAnchor = typeof item.to === "string" && item.to.includes("#");
+                const className = ({ isActive }) => `topbar-link ${isActive ? "topbar-link--active" : ""}`;
 
-          <div className="topbar-actions">
-            {user ? (
-              <>
-                <span className="user-pill">{user.full_name || user.email}</span>
-                <button className="btn btn-ghost btn-small" type="button" onClick={logout}>
-                  Đăng xuất
-                </button>
-              </>
-            ) : (
-              AUTH_ACTIONS.map((item) => {
-                const isActiveAction = onAuthPage && authMode === item.mode;
-                const className = onAuthPage
-                  ? isActiveAction
-                    ? "btn btn-small"
-                    : "btn btn-ghost btn-small"
-                  : item.variant === "primary"
-                    ? "btn btn-small"
-                    : "btn btn-ghost btn-small";
+                if (isAnchor) {
+                  return (
+                    <a key={item.to} href={item.to} className="topbar-link">
+                      {item.label}
+                    </a>
+                  );
+                }
 
                 return (
-                  <Link key={item.label} to={authRoute(item.mode, authRole)} state={{ focusAuth: true }} className={className}>
+                  <NavLink key={item.to} to={item.to} className={className}>
                     {item.label}
-                  </Link>
+                  </NavLink>
                 );
-              })
-            )}
+              })}
+            </nav>
+
+            <div className="topbar-actions">
+              {user ? (
+                <>
+                  <span className="user-pill">{user.full_name || user.email}</span>
+                  <button className="btn btn-ghost btn-small" type="button" onClick={logout}>
+                    Đăng xuất
+                  </button>
+                </>
+              ) : (
+                AUTH_ACTIONS.map((item) => {
+                  const isActiveAction = onAuthPage && authMode === item.mode;
+                  const className = onAuthPage
+                    ? isActiveAction
+                      ? "btn btn-small"
+                      : "btn btn-ghost btn-small"
+                    : item.variant === "primary"
+                      ? "btn btn-small"
+                      : "btn btn-ghost btn-small";
+
+                  return (
+                    <Link key={item.label} to={authRoute(item.mode, authRole)} state={{ focusAuth: true }} className={className}>
+                      {item.label}
+                    </Link>
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       <main className="container app-main">{children}</main>
 

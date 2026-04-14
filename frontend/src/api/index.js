@@ -23,10 +23,101 @@ export const api = {
         method: "POST",
         body: JSON.stringify(payload),
       }),
+    loginOtpStart: (email) =>
+      apiRequest("/auth/login/otp/start", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+    loginOtpVerify: (email, code) =>
+      apiRequest("/auth/login/otp/verify", {
+        method: "POST",
+        body: JSON.stringify({ email, code }),
+      }),
     registerPassword: (payload) =>
       apiRequest("/auth/register/password", {
         method: "POST",
         body: JSON.stringify(payload),
+      }),
+    registerOtpStart: (payload) =>
+      apiRequest("/auth/register/otp/start", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    registerOtpVerify: (email, code) =>
+      apiRequest("/auth/register/otp/verify", {
+        method: "POST",
+        body: JSON.stringify({ email, code }),
+      }),
+  },
+  jobs: {
+    list: (params = "") => apiRequest(`/jobs${params}`, { auth: false }),
+    mine: (params = "") => apiRequest(`/jobs/mine${params}`),
+    detail: (id) => apiRequest(`/jobs/${id}`, { auth: false }),
+    screen: (id) => apiRequest(`/jobs/${id}/screen`),
+    create: (payload) => apiRequest("/jobs", { method: "POST", body: JSON.stringify(payload) }),
+    update: (id, payload) => apiRequest(`/jobs/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+    delete: (id) => apiRequest(`/jobs/${id}`, { method: "DELETE" }),
+  },
+  tags: {
+    list: (params = "") => apiRequest(`/tags${params}`, { auth: false }),
+    categories: () => apiRequest("/tags/categories", { auth: false }),
+  },
+  statistics: {
+    landing: () => apiRequest("/statistics/landing", { auth: false }),
+  },
+  resumes: {
+    list: () => apiRequest("/resumes"),
+    templates: () => apiRequest("/resumes/templates", { auth: false }),
+    detail: (id) => apiRequest(`/resumes/${id}`),
+    createManual: (payload) =>
+      apiRequest("/resumes/manual", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    createFromTemplate: (payload) =>
+      apiRequest("/resumes/from-template", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    upload: (formData) => apiRequest("/resumes/upload", { method: "POST", body: formData }),
+    update: (id, payload) =>
+      apiRequest(`/resumes/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    remove: (id) => apiRequest(`/resumes/${id}`, { method: "DELETE" }),
+    updateProfile: (payload) =>
+      apiRequest("/profiles/me", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    getProfile: () => apiRequest("/profiles/me"),
+    exportUrl: (resumeId, format = "pdf") =>
+      `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001/api"}/resumes/${resumeId}/export?format=${format}`,
+    recommendations: () => apiRequest("/resumes/recommendations"),
+  },
+  companies: {
+    me: () => apiRequest("/companies/me"),
+    featured: () => apiRequest("/companies/featured", { auth: false }),
+    updateMe: (payload) =>
+      apiRequest("/companies/me", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+  },
+  applications: {
+    create: (payload) =>
+      apiRequest("/applications", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    myApplications: () => apiRequest("/applications/mine"),
+    recruiterApplications: () => apiRequest("/applications/recruiter"),
+    recruiterApplicationResume: (applicationId) => apiRequest(`/applications/${applicationId}/resume`),
+    updateStatus: (id, status) =>
+      apiRequest(`/applications/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
       }),
   },
 };
