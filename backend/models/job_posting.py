@@ -32,3 +32,5 @@ class JobPosting(db.Model):
     published_at = db.Column(db.DateTime)
 
     tags = db.relationship("Tag", secondary=job_tags, backref="jobs")
+    applications = db.relationship("Application", backref="job", cascade="all, delete-orphan")
+    match_scores = db.relationship("MatchScore", backref="job", cascade="all, delete-orphan")
