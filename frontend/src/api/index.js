@@ -95,6 +95,17 @@ export const api = {
     exportUrl: (resumeId, format = "pdf") =>
       `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001/api"}/resumes/${resumeId}/export?format=${format}`,
     recommendations: () => apiRequest("/resumes/recommendations"),
+    preview: (payload) =>
+    apiRequest("/resumes/preview", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+    generatePdf: (payload) =>
+    apiRequest("/resumes/generate-pdf", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      responseType: "blob",  // ← Important!
+    }),
   },
   companies: {
     me: () => apiRequest("/companies/me"),

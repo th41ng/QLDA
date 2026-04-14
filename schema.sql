@@ -398,28 +398,49 @@ VALUES
 
 INSERT INTO tags (id, name, slug, category_id, description)
 VALUES
-  (1, 'React', 'react', 2, 'Kỹ năng React JS'),
-  (2, 'Flask', 'flask', 2, 'Kỹ năng Flask'),
-  (3, 'MySQL', 'mysql', 2, 'Kỹ năng MySQL'),
-  (4, 'Frontend', 'frontend', 1, 'Lĩnh vực frontend'),
-  (5, 'Backend', 'backend', 1, 'Lĩnh vực backend'),
-  (6, 'Junior', 'junior', 3, 'Cấp độ Junior'),
-  (7, '1 year', '1-year', 3, 'Kinh nghiệm 1 năm'),
-  (8, 'TP. Ho Chi Minh', 'ho-chi-minh-city', 4, 'Địa điểm tại TP. HCM'),
-  (9, 'English', 'english', 2, 'Tiếng Anh'),
-  (10, 'Bachelor', 'bachelor', 2, 'Trình độ đại học'),
-  (11, 'UI/UX', 'ui-ux', 1, 'Thiết kế trải nghiệm người dùng'),
-  (12, 'Data', 'data', 1, 'Phân tích dữ liệu'),
-  (13, 'QA', 'qa', 1, 'Kiểm thử phần mềm'),
-  (14, 'Sales', 'sales', 1, 'Kinh doanh và bán hàng'),
-  (15, 'Product', 'product', 1, 'Quản lý sản phẩm'),
-  (16, 'Node.js', 'nodejs', 2, 'Kỹ năng Node.js'),
-  (17, 'Python', 'python', 2, 'Kỹ năng Python'),
-  (18, 'HTML/CSS', 'html-css', 2, 'Kỹ năng giao diện web'),
-  (19, 'Fresher', 'fresher', 3, 'Mức kinh nghiệm fresher'),
-  (20, 'Remote', 'remote', 4, 'Làm việc từ xa'),
-  (21, 'Full-time', 'full-time', 5, 'Công việc toàn thời gian'),
-  (22, 'Part-time', 'part-time', 5, 'Công việc bán thời gian');
+  -- Kỹ năng (category 2)
+  (1,  'React',            'react',            2, 'Kỹ năng React JS'),
+  (2,  'Flask',            'flask',            2, 'Kỹ năng Flask'),
+  (3,  'MySQL',            'mysql',            2, 'Kỹ năng MySQL'),
+  (9,  'English',          'english',          2, 'Tiếng Anh'),
+  (16, 'Node.js',          'nodejs',           2, 'Kỹ năng Node.js'),
+  (17, 'Python',           'python',           2, 'Kỹ năng Python'),
+  (18, 'HTML/CSS',         'html-css',         2, 'Kỹ năng HTML/CSS'),
+  (23, 'JavaScript',       'javascript',       2, 'Kỹ năng JavaScript'),
+  (24, 'SQL',              'sql',              2, 'Kỹ năng SQL'),
+  (25, 'Figma',            'figma',            2, 'Kỹ năng Figma'),
+  (26, 'Power BI',         'power-bi',         2, 'Kỹ năng Power BI'),
+  (27, 'Excel',            'excel',            2, 'Kỹ năng Excel'),
+  (28, 'SEO',              'seo',              2, 'Kỹ năng SEO'),
+  (29, 'Digital Marketing','digital-marketing',2, 'Kỹ năng Digital Marketing'),
+  (30, 'Communication',    'communication',    2, 'Kỹ năng giao tiếp'),
+  (31, 'Docker',           'docker',           2, 'Kỹ năng Docker/DevOps'),
+  -- Ngành nghề (category 1)
+  (4,  'Frontend',   'frontend',   1, 'Lĩnh vực frontend'),
+  (5,  'Backend',    'backend',    1, 'Lĩnh vực backend'),
+  (11, 'UI/UX',      'ui-ux',      1, 'Thiết kế trải nghiệm người dùng'),
+  (12, 'Data',       'data',       1, 'Phân tích dữ liệu'),
+  (13, 'QA',         'qa',         1, 'Kiểm thử phần mềm'),
+  (14, 'Sales',      'sales',      1, 'Kinh doanh và bán hàng'),
+  (15, 'Product',    'product',    1, 'Quản lý sản phẩm'),
+  (32, 'IT',         'it',         1, 'Công nghệ thông tin'),
+  (33, 'Marketing',  'marketing',  1, 'Lĩnh vực marketing'),
+  (34, 'Finance',    'finance',    1, 'Lĩnh vực tài chính'),
+  (35, 'HR',         'hr',         1, 'Lĩnh vực nhân sự'),
+  (36, 'Operations', 'operations', 1, 'Lĩnh vực vận hành'),
+  (37, 'Logistics',  'logistics',  1, 'Lĩnh vực logistics'),
+  (38, 'E-commerce', 'e-commerce', 1, 'Thương mại điện tử'),
+  (39, 'Design',     'design',     1, 'Lĩnh vực thiết kế'),
+  -- Kinh nghiệm (category 3)
+  (6,  'Junior',  'junior',  3, 'Cấp độ Junior'),
+  (19, 'Fresher', 'fresher', 3, 'Cấp độ Fresher'),
+  (40, 'Middle',  'middle',  3, 'Cấp độ Middle'),
+  (41, 'Senior',  'senior',  3, 'Cấp độ Senior'),
+  -- Hình thức (category 5)
+  (21, 'Full-time',   'full-time',   5, 'Công việc toàn thời gian'),
+  (22, 'Part-time',   'part-time',   5, 'Công việc bán thời gian'),
+  (42, 'Contract',    'contract',    5, 'Hợp đồng ngắn hạn'),
+  (43, 'Internship',  'internship',  5, 'Thực tập sinh');
 
 INSERT INTO job_postings (
   id, recruiter_user_id, company_id, title, slug, summary, description, requirements,
@@ -522,29 +543,32 @@ VALUES
 
 INSERT INTO job_tags (job_id, tag_id)
 VALUES
-  (1, 1),
-  (1, 3),
-  (1, 4),
-  (1, 6),
-  (1, 8),
-  (1, 21),
-  (2, 2),
-  (2, 3),
-  (2, 5),
-  (2, 7),
-  (2, 8),
-  (2, 20),
-  (2, 21),
-  (3, 11),
-  (3, 1),
-  (3, 18),
-  (3, 8),
-  (3, 21),
-  (4, 13),
-  (4, 3),
-  (4, 20),
-  (4, 6),
-  (4, 21);
+  -- job 1: Frontend React Developer
+  (1, 1),  -- React
+  (1, 4),  -- Frontend
+  (1, 6),  -- Junior
+  (1, 21), -- Full-time
+  (1, 23), -- JavaScript
+  (1, 32), -- IT
+  -- job 2: Backend Flask Developer
+  (2, 2),  -- Flask
+  (2, 3),  -- MySQL
+  (2, 5),  -- Backend
+  (2, 17), -- Python
+  (2, 40), -- Middle
+  (2, 21), -- Full-time
+  -- job 3: UI/UX Designer
+  (3, 11), -- UI/UX
+  (3, 25), -- Figma
+  (3, 39), -- Design
+  (3, 40), -- Middle
+  (3, 21), -- Full-time
+  -- job 4: QA Automation Engineer
+  (4, 13), -- QA
+  (4, 24), -- SQL
+  (4, 6),  -- Junior
+  (4, 21), -- Full-time
+  (4, 32); -- IT
 
 INSERT INTO resumes (
   id, user_id, title, source_type, template_name, original_filename, stored_path, file_ext, mime_type,
@@ -605,7 +629,7 @@ VALUES
   (1, 21),
   (2, 1),
   (2, 4),
-  (2, 7),
+  (2, 6),
   (2, 21);
 
 INSERT INTO applications (
@@ -634,6 +658,98 @@ VALUES
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
   );
+
+-- Thêm recruiters và companies cho nhiều ngành nghề
+INSERT INTO users (id, full_name, email, password_hash, role, auth_method_preference, status, email_verified)
+VALUES
+  (4, 'Nova Commerce HR',   'hr@novacommerce.vn',     'scrypt:32768:8:1$6udiTiwBWgqH2QRg$7a5650eec4994b99e21e4cc2a1181b5d98df1c683d70dda134007c234ce08f6d6325492852fa1c95db00ee2fe71778b7c75bf2e60b5edccec1b69648de3f31c0', 'recruiter', 'otp', 'active', 1),
+  (5, 'FinCore HR',          'jobs@fincore.vn',        'scrypt:32768:8:1$6udiTiwBWgqH2QRg$7a5650eec4994b99e21e4cc2a1181b5d98df1c683d70dda134007c234ce08f6d6325492852fa1c95db00ee2fe71778b7c75bf2e60b5edccec1b69648de3f31c0', 'recruiter', 'otp', 'active', 1),
+  (6, 'Bright Studio HR',    'hello@brightstudio.vn',  'scrypt:32768:8:1$6udiTiwBWgqH2QRg$7a5650eec4994b99e21e4cc2a1181b5d98df1c683d70dda134007c234ce08f6d6325492852fa1c95db00ee2fe71778b7c75bf2e60b5edccec1b69648de3f31c0', 'recruiter', 'otp', 'active', 1),
+  (7, 'GreenLeaf HR',        'careers@greenleafhr.vn', 'scrypt:32768:8:1$6udiTiwBWgqH2QRg$7a5650eec4994b99e21e4cc2a1181b5d98df1c683d70dda134007c234ce08f6d6325492852fa1c95db00ee2fe71778b7c75bf2e60b5edccec1b69648de3f31c0', 'recruiter', 'otp', 'active', 1),
+  (8, 'SalesPulse HR',       'sales@salespulse.vn',    'scrypt:32768:8:1$6udiTiwBWgqH2QRg$7a5650eec4994b99e21e4cc2a1181b5d98df1c683d70dda134007c234ce08f6d6325492852fa1c95db00ee2fe71778b7c75bf2e60b5edccec1b69648de3f31c0', 'recruiter', 'otp', 'active', 1),
+  (9, 'Atlas Logistics HR',  'careers@atlaslogistics.vn', 'scrypt:32768:8:1$6udiTiwBWgqH2QRg$7a5650eec4994b99e21e4cc2a1181b5d98df1c683d70dda134007c234ce08f6d6325492852fa1c95db00ee2fe71778b7c75bf2e60b5edccec1b69648de3f31c0', 'recruiter', 'otp', 'active', 1);
+
+INSERT INTO companies (id, recruiter_user_id, company_name, tax_code, website, address, description, logo_url, industry)
+VALUES
+  (2, 4, 'Nova Commerce',      '0319876543', 'https://novacommerce.vn',      'Quan 3, TP. Ho Chi Minh', 'Doanh nghiep thuong mai dien tu tap trung vao tang truong va cong nghe.',     'https://res.cloudinary.com/dqukehyry/image/upload/v1775390271/original-ac839f228c8ebe7139e7a9cfcae7d3fa_vgpvbl.png', 'E-commerce'),
+  (3, 5, 'FinCore Analytics',  '0109988776', 'https://fincore.vn',           'Quan 7, TP. Ho Chi Minh', 'Cong ty phan tich du lieu va giai phap tai chinh.',                           'https://res.cloudinary.com/dqukehyry/image/upload/v1775390270/bb19b75c7489d8dadb8b1b709bb8ee65_yoymlk.png',          'Finance'),
+  (4, 6, 'Bright Studio',      '0312468024', 'https://brightstudio.vn',      'Ha Noi',                  'Studio thiet ke san pham so va giao dien cho web/mobile.',                   'https://res.cloudinary.com/dqukehyry/image/upload/v1775390271/business-logo-template-minimal-branding-design-vector_53876-136229_b4ov5l.jpg', 'Design'),
+  (5, 7, 'GreenLeaf HR',       '0201357901', 'https://greenleafhr.vn',       'Da Nang',                 'Don vi tuyen dung va tu van nhan su cho doanh nghiep cong nghe.',            'https://res.cloudinary.com/dqukehyry/image/upload/v1775390271/2bfb04ad814c4995f0c537c68db5cd0b-multicolor-swirls-circle-logo_nsrgtn.png', 'HR'),
+  (6, 8, 'SalesPulse',         '0508899001', 'https://salespulse.vn',        'TP. Ho Chi Minh',         'Doi ngu ban hang va tang truong doanh so cho san pham so.',                  'https://res.cloudinary.com/dqukehyry/image/upload/v1775390269/291-logo-1711991296.916_iqxlt2.svg',                   'Sales'),
+  (7, 9, 'Atlas Logistics',    '0311122334', 'https://atlaslogistics.vn',    'Can Tho',                 'Doanh nghiep logistics va van hanh chuoi cung ung.',                         'https://res.cloudinary.com/dqukehyry/image/upload/v1775390270/d2c16d99034f9407fd708dfc3356c688_d9prfy.jpg',           'Logistics');
+
+INSERT INTO job_postings (
+  id, recruiter_user_id, company_id, title, slug, summary, description, requirements,
+  responsibilities, location, workplace_type, employment_type, experience_level,
+  salary_min, salary_max, salary_currency, vacancy_count, deadline, status, is_featured, published_at
+)
+VALUES
+  (5, 4, 2, 'E-commerce Backend Engineer',   'ecommerce-backend-engineer',      'Xây dựng API cho hệ thống bán hàng đa kênh.',                          'Phát triển backend cho platform e-commerce, quản lý đơn hàng và thanh toán.', 'Node.js, SQL, REST API, caching, hệ thống đơn hàng.',             'Tối ưu hiệu năng, đảm bảo luồng checkout và tích hợp third-party.',         'TP. Ho Chi Minh', 'hybrid',  'full-time', 'middle', 18000000, 30000000, 'VND', 2, '2026-12-31', 'published', 1, CURRENT_TIMESTAMP),
+  (6, 4, 2, 'Performance Marketing Specialist', 'performance-marketing-specialist', 'Tối ưu quảng cáo và tăng trưởng doanh thu.',                           'Phụ trách quảng cáo digital, tracking, landing page và báo cáo hiệu quả.',  'Digital Marketing, SEO, communication, Excel, analytics.',         'Theo dõi ROAS, A/B testing và tối ưu chiến dịch quảng cáo.',               'TP. Ho Chi Minh', 'onsite',  'full-time', 'junior', 12000000, 20000000, 'VND', 1, '2026-12-31', 'published', 0, CURRENT_TIMESTAMP),
+  (7, 5, 3, 'Data Analyst',                  'data-analyst',                    'Phân tích dữ liệu doanh thu và hành vi người dùng.',                   'Tổng hợp dashboard, phân tích KPI và hỗ trợ business quyết định.',          'SQL, Excel, Power BI, tư duy phân tích.',                         'Xây dựng báo cáo định kỳ và insight cho quản lý.',                         'TP. Ho Chi Minh', 'onsite',  'full-time', 'junior', 14000000, 24000000, 'VND', 2, '2026-12-31', 'published', 1, CURRENT_TIMESTAMP),
+  (8, 5, 3, 'BI Engineer',                   'bi-engineer',                     'Xây dựng pipeline và báo cáo BI.',                                     'Phát triển dashboard và mô hình dữ liệu phục vụ báo cáo tài chính.',        'SQL, Power BI, data modeling, analytics.',                        'Tối ưu mô hình dữ liệu và trực quan hóa báo cáo.',                         'Remote',          'remote',  'contract',  'middle', 20000000, 32000000, 'VND', 1, '2026-12-31', 'published', 0, CURRENT_TIMESTAMP),
+  (9, 6, 4, 'Product Designer',              'product-designer',                'Thiết kế sản phẩm số cho nền tảng việc làm.',                          'Phụ trách user flow, wireframe, UI system và prototype.',                   'Figma, product thinking, UI system, teamwork.',                   'Làm việc với frontend, product và recruiter dashboard.',                    'Ha Noi',          'hybrid',  'full-time', 'middle', 16000000, 26000000, 'VND', 1, '2026-12-31', 'published', 1, CURRENT_TIMESTAMP),
+  (10, 7, 5, 'Talent Acquisition Specialist', 'talent-acquisition-specialist',  'Tìm kiếm và sàng lọc ứng viên công nghệ.',                            'Quản lý nguồn ứng viên, xây dựng quan hệ với candidate và hiring manager.', 'Communication, HR mindset, sourcing, CRM.',                       'Đăng tin, phỏng vấn sơ bộ và theo dõi pipeline tuyển dụng.',               'Da Nang',         'onsite',  'full-time', 'middle', 13000000, 21000000, 'VND', 1, '2026-12-31', 'published', 0, CURRENT_TIMESTAMP),
+  (11, 8, 6, 'Digital Marketing Executive',  'digital-marketing-executive',     'Quản lý chiến dịch digital và nội dung quảng bá.',                    'Lập kế hoạch marketing, tối ưu nội dung và theo dõi hiệu quả.',             'Digital Marketing, SEO, communication, content.',                 'Chạy chiến dịch, đo lường KPI và phối hợp sales.',                         'TP. Ho Chi Minh', 'onsite',  'full-time', 'middle', 13000000, 21000000, 'VND', 1, '2026-12-31', 'published', 0, CURRENT_TIMESTAMP),
+  (12, 9, 7, 'Operations Coordinator',       'operations-coordinator',          'Điều phối vận hành và xử lý đơn hàng.',                               'Phối hợp đội vận hành, theo dõi tiến độ và tối ưu workflow.',               'Operations, communication, Excel, process thinking.',             'Đảm bảo quy trình vận hành trơn tru và theo dõi KPI.',                     'Can Tho',         'onsite',  'full-time', 'junior', 10000000, 15000000, 'VND', 1, '2026-12-31', 'published', 0, CURRENT_TIMESTAMP);
+
+INSERT INTO job_tags (job_id, tag_id)
+VALUES
+  -- job 5: E-commerce Backend Engineer
+  (5, 5),  -- Backend
+  (5, 16), -- Node.js
+  (5, 24), -- SQL
+  (5, 38), -- E-commerce
+  (5, 40), -- Middle
+  (5, 21), -- Full-time
+  -- job 6: Performance Marketing Specialist
+  (6, 33), -- Marketing
+  (6, 29), -- Digital Marketing
+  (6, 28), -- SEO
+  (6, 27), -- Excel
+  (6, 6),  -- Junior
+  (6, 21), -- Full-time
+  -- job 7: Data Analyst
+  (7, 12), -- Data
+  (7, 24), -- SQL
+  (7, 27), -- Excel
+  (7, 26), -- Power BI
+  (7, 34), -- Finance
+  (7, 6),  -- Junior
+  (7, 21), -- Full-time
+  -- job 8: BI Engineer
+  (8, 12), -- Data
+  (8, 24), -- SQL
+  (8, 26), -- Power BI
+  (8, 34), -- Finance
+  (8, 40), -- Middle
+  (8, 42), -- Contract
+  -- job 9: Product Designer
+  (9, 39), -- Design
+  (9, 25), -- Figma
+  (9, 11), -- UI/UX
+  (9, 15), -- Product
+  (9, 40), -- Middle
+  (9, 21), -- Full-time
+  -- job 10: Talent Acquisition Specialist
+  (10, 35), -- HR
+  (10, 30), -- Communication
+  (10, 40), -- Middle
+  (10, 21), -- Full-time
+  -- job 11: Digital Marketing Executive
+  (11, 33), -- Marketing
+  (11, 29), -- Digital Marketing
+  (11, 28), -- SEO
+  (11, 30), -- Communication
+  (11, 40), -- Middle
+  (11, 21), -- Full-time
+  -- job 12: Operations Coordinator
+  (12, 36), -- Operations
+  (12, 37), -- Logistics
+  (12, 27), -- Excel
+  (12, 30), -- Communication
+  (12, 6),  -- Junior
+  (12, 21); -- Full-time
 
 INSERT INTO match_scores (job_id, resume_id, candidate_user_id, score, breakdown_json)
 VALUES
