@@ -6528,6 +6528,147 @@ ul { padding-left:18px; color:var(--muted); }
 .cv-screening-band--amber { background: #fffbeb; color: #b45309; }
 .cv-screening-band--slate { background: #f1f5f9; color: #475569; }
 
+/* Enhanced form styles for Job Editor */
+.rw-alert-success {
+  border-radius: 20px;
+  border: 1px solid #86efac;
+  background-color: #f0fdf4;
+  padding: 1rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #16a34a;
+}
+
+/* Unsaved changes indicator */
+.unsaved-indicator {
+  color: #f59e0b;
+  margin-left: 0.5rem;
+  font-weight: bold;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Field styling improvements */
+.recruiter-editor-field {
+  position: relative;
+}
+
+.field-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.field-label-row span:first-child {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* Error states */
+.recruiter-editor-field--error input,
+.recruiter-editor-field--error select,
+.recruiter-editor-field--error textarea {
+  border-color: #fecaca !important;
+  background-color: #fef2f2;
+}
+
+.recruiter-editor-field--error input:focus,
+.recruiter-editor-field--error select:focus,
+.recruiter-editor-field--error textarea:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.field-error {
+  display: block;
+  font-size: 0.8rem;
+  color: #dc2626;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* Field metadata */
+.field-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  font-size: 0.75rem;
+}
+
+.char-count {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.word-count {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* Form inputs with better styling */
+.recruiter-editor-field input,
+.recruiter-editor-field select,
+.recruiter-editor-field textarea {
+  font-size: 0.95rem;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #dbeafe;
+  background: #fff;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.recruiter-editor-field input:hover,
+.recruiter-editor-field select:hover,
+.recruiter-editor-field textarea:hover {
+  border-color: #93c5fd;
+}
+
+.recruiter-editor-field input:focus,
+.recruiter-editor-field select:focus,
+.recruiter-editor-field textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Disabled state */
+.recruiter-editor-field input:disabled,
+.recruiter-editor-field select:disabled,
+.recruiter-editor-field textarea:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Better button states */
+.rw-btn-outline-lg:disabled,
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rw-btn-outline-lg:disabled:hover,
+.btn:disabled:hover {
+  background-color: inherit;
+  color: inherit;
+}
+
 .cv-screening-empty {
   border-radius: 18px;
   border: 1px dashed #dbeafe;
