@@ -91,10 +91,14 @@ def _application_to_dict(application: Application):
 @role_required("candidate")
 def create_application():
     user_id = int(get_jwt_identity())
-    data = request.get_json(force=True)
+    data = request.get_json(force=True) or {}
 
-    job_id = data.get("job_id")
-    resume_id = data.get("resume_id")
+    try:
+        job_id = int(data.get("job_id"))
+        resume_id = int(data.get("resume_id"))
+    except (TypeError, ValueError):
+        return json_error("job_id and resume_id must be integers.", 400)
+
     if not job_id or not resume_id:
         return json_error("job_id and resume_id are required.", 400)
 
@@ -114,12 +118,43 @@ def create_application():
         candidate_user_id=user_id,
         job_id=job.id,
         resume_id=resume.id,
-        cover_letter=data.get("cover_letter"),
+        cover_letter=(data.get("cover_letter") or "").strip() or None,
         status="submitted",
     )
     db.session.add(app)
     db.session.commit()
     return json_ok(_application_to_dict(app), "Application submitted", 201)
+
+
+@api_applications_bp.get("/check")
+@jwt_required()
+@role_required("candidate")
+def check_application_for_job():
+    user_id = int(get_jwt_identity())
+
+    job_id_raw = request.args.get("job_id")
+    try:
+        job_id = int(job_id_raw)
+    except (TypeError, ValueError):
+        return json_error("job_id must be an integer.", 400)
+
+    application = (
+        Application.query.options(
+            selectinload(Application.job).selectinload(JobPosting.company),
+            selectinload(Application.resume).selectinload(Resume.tags),
+            selectinload(Application.candidate),
+        )
+        .filter(Application.candidate_user_id == user_id, Application.job_id == job_id)
+        .first()
+    )
+
+    return json_ok(
+        {
+            "job_id": job_id,
+            "has_applied": bool(application),
+            "application": _application_to_dict(application) if application else None,
+        }
+    )
 
 
 @api_applications_bp.get("/mine")
