@@ -101,6 +101,113 @@ h1,h2,h3 { margin-top:0; line-height:1.15; }
 .detail-grid { display:grid; grid-template-columns: 1.3fr .9fr; gap:16px; }
 .job-hero { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; }
 .salary-box { min-width:160px; padding:14px 16px; border-radius:16px; background:linear-gradient(135deg,#dbeafe,#eff6ff); color:var(--accent); font-weight:800; text-align:center; }
+.job-detail-shell {
+  padding: 28px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.96));
+}
+
+.job-detail-page {
+  display: grid;
+  gap: 0;
+}
+
+.job-detail-hero {
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.job-detail-hero-main {
+  display: grid;
+  gap: 10px;
+}
+
+.job-detail-hero-main h1 {
+  margin-bottom: 0;
+}
+
+.job-detail-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.job-detail-salary {
+  display: grid;
+  gap: 6px;
+  text-align: center;
+  min-width: 210px;
+}
+
+.job-detail-salary span {
+  color: #35527c;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.job-detail-salary strong {
+  font-size: 1.08rem;
+  line-height: 1.35;
+}
+
+.job-detail-grid {
+  align-items: start;
+}
+
+.job-detail-content {
+  display: grid;
+  gap: 16px;
+}
+
+.job-detail-block {
+  border: 1px solid #e2ebff;
+  border-radius: 16px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.job-detail-block h2 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+
+.job-detail-block p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.68;
+  white-space: pre-line;
+}
+
+.job-apply-card {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  position: sticky;
+  top: 92px;
+}
+
+.job-apply-head {
+  display: grid;
+  gap: 6px;
+}
+
+.job-apply-head h2 {
+  margin-bottom: 0;
+}
+
+.job-apply-head p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.job-apply-existing {
+  grid-template-columns: 1fr;
+}
+
+.job-apply-existing p {
+  margin: 0;
+}
 .card-badge, .tag, .chip, .match-pill { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; font-size:.78rem; font-weight:700; }
 .card-badge { background:var(--accent-soft); color:var(--accent); padding:6px 10px; margin-bottom:12px; }
 .tag, .chip { background:#eff6ff; color:var(--accent); padding:6px 10px; border:0; cursor:pointer; }
@@ -162,11 +269,86 @@ ul { padding-left:18px; color:var(--muted); }
 .status { margin-top:14px; color:#166534; font-weight:700; }
 .flash-stack { margin-bottom:16px; }
 .flash { padding:12px 14px; border-radius:12px; margin-bottom:8px; background:#eff6ff; border:1px solid #bfdbfe; }
+
+.skeleton-shimmer {
+  display: block;
+  width: 100%;
+  height: 14px;
+  border-radius: 10px;
+  background: linear-gradient(100deg, #e6edf8 30%, #f4f8ff 48%, #e6edf8 66%);
+  background-size: 220% 100%;
+  animation: skeletonShimmer 1.35s linear infinite;
+}
+
+.skeleton-text-group {
+  display: grid;
+  gap: 8px;
+}
+
+.skeleton-line {
+  height: 14px;
+}
+
+.skeleton-line--short {
+  width: 68%;
+}
+
+.skeleton-pill {
+  border-radius: 999px;
+}
+
+.skeleton-card {
+  pointer-events: none;
+}
+
+.skeleton-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.skeleton-grid--jobs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.skeleton-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.skeleton-stat {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  background: #fff;
+  display: grid;
+  gap: 8px;
+}
+
+.skeleton-salary-box {
+  min-width: 180px;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 130% 0;
+  }
+  100% {
+    background-position: -90% 0;
+  }
+}
 @media (max-width: 860px) {
   .hero, .split, .detail-grid, .form-grid, .filter-grid, .auth-layout, .auth-grid { grid-template-columns:1fr; }
   .portal-hero, .portal-grid, .stats-row, .job-row-card { grid-template-columns:1fr; }
   .nav { flex-direction:column; align-items:flex-start; }
   .job-hero { flex-direction:column; }
+  .job-detail-shell {
+    padding: 20px;
+  }
+  .job-apply-card {
+    position: static;
+    top: auto;
+  }
   .job-row-side { align-items:flex-start; }
   .auth-header-row { flex-direction:column; }
   .auth-mini-stats { grid-template-columns:1fr; }
@@ -196,6 +378,11 @@ ul { padding-left:18px; color:var(--muted); }
   }
 
   .recruiter-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skeleton-grid--jobs,
+  .skeleton-metrics {
     grid-template-columns: 1fr;
   }
 }

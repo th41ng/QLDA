@@ -122,6 +122,7 @@ export const api = {
         method: "POST",
         body: JSON.stringify(payload),
       }),
+    checkForJob: (jobId) => apiRequest(`/applications/check?job_id=${jobId}`),
     myApplications: () => apiRequest("/applications/mine"),
     recruiterApplications: () => apiRequest("/applications/recruiter"),
     recruiterApplicationResume: (applicationId) => apiRequest(`/applications/${applicationId}/resume`),
