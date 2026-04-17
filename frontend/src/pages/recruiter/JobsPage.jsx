@@ -322,7 +322,7 @@ function JobFormModal({ form, editing, submitting, onClose, onChange, onSubmit, 
             </div>
           </FormSection>
 
-          <FormSection title="Yêu cầu ứng viên" description="Chỉ điền các yêu cầu đang được backend hỗ trợ qua trường requirements.">
+          <FormSection title="Yêu cầu ứng viên" description="Liệt kê các yêu cầu về kỹ năng, kinh nghiệm hoặc điều kiện ứng tuyển để thu hút đúng ứng viên.">
             <Field label="Requirements">
               <textarea rows="6" value={form.requirements} onChange={(event) => onChange("requirements", event.target.value)} placeholder="Yêu cầu kỹ năng, kinh nghiệm hoặc điều kiện ứng tuyển" />
             </Field>
