@@ -132,4 +132,64 @@ export const api = {
         body: JSON.stringify({ status }),
       }),
   },
+  admin: {
+    login: (email, password) =>
+      apiRequest("/admin/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+        auth: false,
+      }),
+    getAll: () => apiRequest("/admin"),
+    getById: (id) => apiRequest(`/admin/${id}`),
+    create: (payload) =>
+      apiRequest("/admin", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    update: (id, payload) =>
+      apiRequest(`/admin/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    delete: (id) =>
+      apiRequest(`/admin/${id}`, {
+        method: "DELETE",
+      }),
+    search: (query) =>
+      apiRequest(`/admin/search/${query}`),
+    changePassword: (id, payload) =>
+      apiRequest(`/admin/${id}/change-password`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+  },
+  users: {
+    getAll: (role, status, search) => {
+      let url = "/users";
+      const params = new URLSearchParams();
+      if (role) params.append("role", role);
+      if (status) params.append("status", status);
+      if (search) params.append("search", search);
+      if (params.toString()) url += `?${params.toString()}`;
+      return apiRequest(url);
+    },
+    getById: (id) => apiRequest(`/users/${id}`),
+    create: (payload) =>
+      apiRequest("/users", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    update: (id, payload) =>
+      apiRequest(`/users/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    delete: (id) =>
+      apiRequest(`/users/${id}`, {
+        method: "DELETE",
+      }),
+    search: (query) =>
+      apiRequest(`/users/search/${query}`),
+    stats: () => apiRequest("/users/stats/overview"),
+  },
 };

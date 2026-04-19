@@ -3,6 +3,11 @@
   auth: "/auth",
   jobs: "/jobs",
   jobDetail: (id = ":id") => `/jobs/${id}`,
+  admin: {
+    login: "/admin/login",
+    dashboard: "/admin/dashboard",
+    users: "/admin/users",
+  },
   candidate: {
     profile: "/candidate/profile",
     resumes: "/candidate/resumes",
@@ -41,6 +46,10 @@ export const AUTH_ACTIONS = [
 ];
 
 export const ROLE_NAV = {
+  admin: [
+    { label: "Dashboard", to: ROUTES.admin.dashboard },
+    { label: "Quản lý Người Dùng", to: ROUTES.admin.users },
+  ],
   candidate: [
     { label: "Hồ sơ", to: ROUTES.candidate.profile },
     { label: "CV của tôi", to: ROUTES.candidate.resumes },
@@ -76,6 +85,7 @@ export const FOOTER_LINKS = {
 };
 
 export function roleHome(role) {
+  if (role === "admin") return ROUTES.admin.dashboard;
   if (role === "candidate") return ROUTES.candidate.profile;
   if (role === "recruiter") return ROUTES.recruiter.dashboard;
   return ROUTES.home;

@@ -90,6 +90,14 @@ export function AuthProvider({ children }) {
     return verifyOtp({ email, purpose: "register", otp: code });
   };
 
+  const adminLogin = async (email, password) => {
+    const data = await api.admin.login(email, password);
+    setAuthSession(data.token, data.user);
+    setUser(data.user);
+    setToken(data.token);
+    return data.user;
+  };
+
   const logout = () => {
     clearAuthSession();
     setUser(null);
@@ -103,6 +111,7 @@ export function AuthProvider({ children }) {
       loading,
       setLoading,
       loginWithPassword,
+      adminLogin,
       sendOtp,
       verifyOtp,
       resendOtp,

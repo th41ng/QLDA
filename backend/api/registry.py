@@ -6,6 +6,8 @@ from .profile_routes import api_profiles_bp
 from .resume_routes import api_resumes_bp
 from .statistics_routes import api_statistics_bp
 from .tags_routes import api_tags_bp
+from .admin_routes import api_admin_bp
+from .users_routes import api_users_bp
 
 API_PREFIXES = {
     "applications": "/api/applications",
@@ -16,6 +18,8 @@ API_PREFIXES = {
     "profiles": "/api/profiles",
     "statistics": "/api/statistics",
     "tags": "/api/tags",
+    "admin": "/api/admin",
+    "users": "/api/users",
 }
 
 API_BLUEPRINTS = (
@@ -27,6 +31,8 @@ API_BLUEPRINTS = (
     (api_profiles_bp, API_PREFIXES["profiles"]),
     (api_statistics_bp, API_PREFIXES["statistics"]),
     (api_tags_bp, API_PREFIXES["tags"]),
+    (api_admin_bp, API_PREFIXES["admin"]),
+    (api_users_bp, API_PREFIXES["users"]),
 )
 
 
