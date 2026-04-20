@@ -49,6 +49,7 @@ export default function CandidateApplicationsPage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [applications, setApplications] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -67,12 +68,17 @@ export default function CandidateApplicationsPage() {
       setLoading(true);
       setError("");
       try {
-        const data = await api.applications.myApplications();
+        const [data, notices] = await Promise.all([
+          api.applications.myApplications(),
+          api.notifications.myNotifications(6).catch(() => []),
+        ]);
         if (!mounted) return;
         setApplications(Array.isArray(data) ? data : []);
+        setNotifications(Array.isArray(notices) ? notices : []);
       } catch (err) {
         if (mounted) {
           setApplications([]);
+          setNotifications([]);
           setError(err.message || "Không thể tải dữ liệu ứng tuyển.");
         }
       } finally {
@@ -206,6 +212,36 @@ export default function CandidateApplicationsPage() {
       </article>
 
       {error ? <div className="auth-alert auth-alert--error">{error}</div> : null}
+
+      {notifications.length ? (
+        <article className="dashboard-card candidate-detail-block">
+          <div className="candidate-detail-block-head">
+            <h4>Thông báo mới</h4>
+            <span className="candidate-detail-hint">Cập nhật nhà tuyển dụng đã gửi trên web</span>
+          </div>
+          <div className="candidate-application-list">
+            {notifications.map((notification) => (
+              <div key={notification.id} className="candidate-application-card" style={{ cursor: "default" }}>
+                <div className="candidate-application-card-head">
+                  <div className="candidate-application-title-block">
+                    <div className="candidate-application-title-row">
+                      <div>
+                        <h3>{notification.title}</h3>
+                        <p>{notification.message}</p>
+                      </div>
+                      <StatusBadge status={mapNotificationStatus(notification.type)} />
+                    </div>
+                    <div className="candidate-application-meta">
+                      <span>{formatDate(notification.created_at)}</span>
+                      <span>{notification.is_read ? "Đã đọc" : "Chưa đọc"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+      ) : null}
 
       <div className="candidate-applications-layout">
         <article className="dashboard-card candidate-application-list-panel">
@@ -468,6 +504,13 @@ function StatusBadge({ status }) {
 
 function getStatusMeta(status) {
   return STATUS_META[status] || STATUS_META.submitted;
+}
+
+function mapNotificationStatus(type) {
+  if (type === "interview") return "interview";
+  if (type === "rejected") return "rejected";
+  if (type === "reviewing") return "reviewing";
+  return "submitted";
 }
 
 function labelEmployment(value) {

@@ -2486,6 +2486,56 @@ ul { padding-left:18px; color:var(--muted); }
   gap: 10px;
 }
 
+.recruiter-action-btn {
+  appearance: none;
+  border: 1px solid #dbe5f3;
+  border-radius: 12px;
+  padding: 10px 14px;
+  min-height: 42px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.recruiter-action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.recruiter-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.recruiter-action-btn--interview {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.recruiter-action-btn--interview.recruiter-action-btn--active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.recruiter-action-btn--reject {
+  border-color: #fecaca;
+  background: #fff5f5;
+  color: #b91c1c;
+}
+
+.recruiter-action-btn--reject.recruiter-action-btn--active {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #fff;
+}
+
 .recruiter-detail-empty,
 .recruiter-empty-state,
 .recruiter-error-state {
@@ -4067,7 +4117,10 @@ ul { padding-left:18px; color:var(--muted); }
   align-items: start;
 }
 
-.candidate-application-list-panel,
+.candidate-application-list-panel {
+  align-self: start;
+}
+
 .candidate-application-detail-panel {
   min-height: 100%;
 }

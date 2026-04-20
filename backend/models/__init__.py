@@ -7,6 +7,7 @@ from .company import Company
 from .cv_template import CvTemplate
 from .job_posting import JobPosting
 from .match_score import MatchScore
+from .notification import Notification
 from .otp_code import OtpCode
 from .resume import Resume
 from .tag import Tag
@@ -21,6 +22,7 @@ __all__ = [
     "CvTemplate",
     "JobPosting",
     "MatchScore",
+    "Notification",
     "OtpCode",
     "Resume",
     "Tag",
