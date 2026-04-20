@@ -1,0 +1,189 @@
+﻿{% extends "admin/base.html" %}
+{% block content %}
+<section class="admin-page">
+  <div class="admin-hero admin-hero--compact">
+    <div class="admin-hero-main">
+      <div>
+        <h1>Tổng quan hệ thống</h1>
+        <p>Theo dõi dữ liệu admin: tài khoản, doanh nghiệp, tin tuyển dụng, hồ sơ ứng tuyển.</p>
+      </div>
+    </div>
+    <div class="admin-hero-meta">
+      <div class="admin-hero-filters">
+        <select class="time-filter">
+          <option value="7">7 ngày</option>
+          <option value="30" selected>30 ngày</option>
+          <option value="90">90 ngày</option>
+          <option value="all">Tất cả</option>
+        </select>
+        <button class="btn-outline btn-small" type="button" onclick="window.location.reload()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6M1 20v-6h6"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Tải lại
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-stats admin-stats--overview admin-stats--enhanced">
+    <article class="stat-card stat-card--enhanced">
+      <div class="stat-card-icon">📋</div>
+      <div class="stat-card-content">
+        <span>Jobs</span>
+        <strong>{{ stats.jobs }}</strong>
+        <p>Tổng số bài tuyển dụng</p>
+        <div class="stat-card-trend stat-card-trend--neutral">
+          <span>{{ stats.jobs }} bài đang hoạt động</span>
+        </div>
+      </div>
+    </article>
+    <article class="stat-card stat-card--enhanced">
+      <div class="stat-card-icon">📄</div>
+      <div class="stat-card-content">
+        <span>Applications</span>
+        <strong>{{ stats.applications }}</strong>
+        <p>Tổng số hồ sơ ứng tuyển</p>
+        <div class="stat-card-trend stat-card-trend--neutral">
+          <span>{{ stats.applications }} hồ sơ tổng cộng</span>
+        </div>
+      </div>
+    </article>
+    <article class="stat-card stat-card--enhanced">
+      <div class="stat-card-icon">🏷️</div>
+      <div class="stat-card-content">
+        <span>Categories</span>
+        <strong>{{ stats.categories }}</strong>
+        <p>Số ngành nghề đang hoạt động</p>
+        <div class="stat-card-trend stat-card-trend--neutral">
+          <span>{{ stats.tags }} tags</span>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div class="chart-grid chart-grid--main-side">
+    <article class="chart-card chart-card--main">
+      <div class="chart-head">
+        <div>
+          <span class="eyebrow eyebrow--compact">Tags</span>
+          <h2>Biểu đồ tròn theo nhãn công việc</h2>
+          <p>Mỗi lát biểu diễn số lượng job được gắn với từng tag trên hệ thống.</p>
+        </div>
+        <strong class="chart-total">{{ charts.tag_job_donut.total }}</strong>
+      </div>
+      <div class="donut-layout">
+        <div class="donut-chart" style="--donut-gradient: {{ charts.tag_job_donut.gradient }};">
+          <div class="donut-center">
+            <strong>{{ charts.tag_job_donut.total }}</strong>
+            <span>jobs</span>
+          </div>
+        </div>
+        <div class="donut-legend">
+          {% for row in charts.tag_job_distribution %}
+            <div class="donut-legend-item">
+              <span class="legend-dot" style="background: {{ row.color }};"></span>
+              <div>
+                <strong>{{ row.label }}</strong>
+                <span>{{ row.count }} jobs ({{ row.percent }}%)</span>
+              </div>
+            </div>
+          {% else %}
+            <div class="empty-state">Chưa có dữ liệu tag.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </article>
+
+    <div class="chart-side">
+      <article class="chart-card">
+        <div class="chart-head">
+          <div>
+            <span class="eyebrow eyebrow--compact">Experience</span>
+            <h2>Biểu đồ tròn theo kinh nghiệm</h2>
+            <p>Phân bố job theo mức kinh nghiệm yêu cầu trên hệ thống.</p>
+          </div>
+          <strong class="chart-total">{{ charts.experience_level_donut.total }}</strong>
+        </div>
+        <div class="donut-layout donut-layout--compact">
+          <div class="donut-chart" style="--donut-gradient: {{ charts.experience_level_donut.gradient }};">
+            <div class="donut-center">
+              <strong>{{ charts.experience_level_donut.total }}</strong>
+              <span>jobs</span>
+            </div>
+          </div>
+          <div class="donut-legend donut-legend--compact">
+            {% for row in charts.experience_level_distribution %}
+              <div class="donut-legend-item">
+                <span class="legend-dot" style="background: {{ row.color }};"></span>
+                <div>
+                  <strong>{{ row.label }}</strong>
+                  <span>{{ row.count }} jobs ({{ row.percent }}%)</span>
+                </div>
+              </div>
+            {% else %}
+              <div class="empty-state">Chưa có dữ liệu kinh nghiệm.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </article>
+
+      <article class="chart-card">
+        <div class="chart-head">
+          <div>
+            <span class="eyebrow eyebrow--compact">Type</span>
+            <h2>Biểu đồ tròn theo hình thức</h2>
+            <p>Phân bố job theo loại hình làm việc trên hệ thống.</p>
+          </div>
+          <strong class="chart-total">{{ charts.employment_type_donut.total }}</strong>
+        </div>
+        <div class="donut-layout donut-layout--compact">
+          <div class="donut-chart" style="--donut-gradient: {{ charts.employment_type_donut.gradient }};">
+            <div class="donut-center">
+              <strong>{{ charts.employment_type_donut.total }}</strong>
+              <span>jobs</span>
+            </div>
+          </div>
+          <div class="donut-legend donut-legend--compact">
+            {% for row in charts.employment_type_distribution %}
+              <div class="donut-legend-item">
+                <span class="legend-dot" style="background: {{ row.color }};"></span>
+                <div>
+                  <strong>{{ row.label }}</strong>
+                  <span>{{ row.count }} jobs ({{ row.percent }}%)</span>
+                </div>
+              </div>
+            {% else %}
+              <div class="empty-state">Chưa có dữ liệu hình thức.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </article>
+    </div>
+
+  </div>
+
+  <section class="admin-card admin-card--simple">
+    <div class="admin-card-head">
+      <div>
+        <h2>Jobs mới nhất</h2>
+        <p>Danh sách ngắn để kiểm tra nhanh dữ liệu mới phát sinh.</p>
+      </div>
+      <a class="btn-outline btn-small" href="{{ url_for('admin.jobs') }}">Xem tất cả</a>
+    </div>
+    <div class="admin-list">
+      {% for job in recent_jobs[:5] %}
+        <div class="admin-item">
+          <div class="admin-item-main">
+            <strong>{{ job.title }}</strong>
+            <div class="admin-item-meta"><span>{{ job.company.company_name if job.company else '' }}</span><span>{{ job.location }}</span><span>{{ job.status }}</span></div>
+          </div>
+        </div>
+      {% else %}
+        <div class="empty-state">Chưa có dữ liệu job.</div>
+      {% endfor %}
+    </div>
+  </section>
+</section>
+{% endblock %}

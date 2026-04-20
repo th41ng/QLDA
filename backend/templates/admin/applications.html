@@ -1,0 +1,123 @@
+﻿{% extends "admin/base.html" %}
+{% block content %}
+<section class="admin-page">
+  <div class="admin-hero">
+    <div>
+      <span class="eyebrow">Applications</span>
+      <h1>Quản lý hồ sơ ứng tuyển</h1>
+      <p>Admin có thể cập nhật trạng thái, ghi chú tuyển dụng và xóa hồ sơ khi cần xử lý dữ liệu.</p>
+    </div>
+  </div>
+
+  <div class="admin-stats">
+    <article class="stat-card"><span>Total</span><strong>{{ total_applications }}</strong><p>Tổng hồ sơ ứng tuyển</p></article>
+  </div>
+
+  <div class="admin-duo">
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h2>{{ 'Chỉnh sửa application' if edit_application else 'Chọn một hồ sơ để chỉnh sửa' }}</h2>
+          <p>Trạng thái hồ sơ đang dùng chung với API recruiter/candidate nên cần giữ đúng các giá trị backend đang hỗ trợ.</p>
+        </div>
+      </div>
+
+      {% if edit_application %}
+      <form method="post" class="admin-form">
+        <input type="hidden" name="action" value="save">
+        <input type="hidden" name="application_id" value="{{ edit_application.id }}">
+        <div class="form-grid">
+          <label class="field full"><span>Candidate</span><input value="{{ edit_application.candidate.full_name if edit_application.candidate else '' }}" disabled></label>
+          <label class="field full"><span>Job</span><input value="{{ edit_application.job.title if edit_application.job else '' }}" disabled></label>
+          <label class="field full"><span>Resume</span><input value="{{ edit_application.resume.title if edit_application.resume else '' }}" disabled></label>
+          <label class="field"><span>Status</span>
+            <select name="status">
+              {% for status in application_status_options %}
+                <option value="{{ status }}" {% if edit_application.status == status %}selected{% endif %}>{{ status }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field full"><span>Recruiter note</span><textarea name="recruiter_note" rows="6">{{ edit_application.recruiter_note if edit_application.recruiter_note else '' }}</textarea></label>
+        </div>
+        <div class="admin-actions">
+          <button class="btn" type="submit">Cập nhật hồ sơ</button>
+          <a class="btn-outline" href="{{ url_for('admin.applications') }}">Đóng chỉnh sửa</a>
+        </div>
+      </form>
+      {% else %}
+      <div class="empty-state">Chọn nút <strong>Sửa</strong> ở bảng bên phải để xem form chỉnh sửa.</div>
+      {% endif %}
+    </section>
+
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h2>Danh sách hồ sơ</h2>
+          <p>Hồ sơ ứng tuyển gắn với candidate, job và resume. Bảng này dùng để duyệt trạng thái và ghi chú.</p>
+        </div>
+      </div>
+      <div class="table-wrap users-table-wrap">
+        <table class="table users-table">
+          <thead>
+            <tr>
+              <th>Candidate</th>
+              <th>Job</th>
+              <th>Resume</th>
+              <th>Status</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for app in applications %}
+              <tr>
+                <td>
+                  <strong>{{ app.candidate.full_name if app.candidate else 'N/A' }}</strong><br>
+                  <small>{{ app.candidate.email if app.candidate else '' }}</small>
+                </td>
+                <td>
+                  <strong>{{ app.job.title if app.job else 'N/A' }}</strong><br>
+                  <small>{{ app.job.company.company_name if app.job and app.job.company else '' }}</small>
+                </td>
+                <td>
+                  <strong>{{ app.resume.title if app.resume else 'N/A' }}</strong><br>
+                  <small>{{ app.applied_at.strftime('%d/%m/%Y %H:%M') if app.applied_at else '' }}</small>
+                </td>
+                <td><span class="admin-pill admin-pill--blue">{{ app.status }}</span></td>
+                <td>
+                  <div class="row-actions row-actions--tight">
+                    <a class="btn-small btn-outline action-btn" href="{{ url_for('admin.applications', edit=app.id) }}">
+                      <span class="action-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M4 20h4l10-10-4-4L4 16v4Z"></path>
+                          <path d="m13 7 4 4"></path>
+                        </svg>
+                      </span>
+                      <span>Sửa</span>
+                    </a>
+                    <form method="post" onsubmit="return confirm('Xóa hồ sơ ứng tuyển này?');">
+                      <input type="hidden" name="action" value="delete">
+                      <input type="hidden" name="application_id" value="{{ app.id }}">
+                      <button class="btn-small btn-danger action-btn" type="submit">
+                        <span class="action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4h8v2"></path>
+                            <path d="M6 6l1 14h10l1-14"></path>
+                          </svg>
+                        </span>
+                        <span>Xóa</span>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="5"><div class="empty-state">Chưa có hồ sơ ứng tuyển nào.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</section>
+{% endblock %}

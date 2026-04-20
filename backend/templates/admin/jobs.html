@@ -1,0 +1,416 @@
+﻿{% extends "admin/base.html" %}
+{% block content %}
+<style>
+  .jobs-page { display: grid; gap: 18px; }
+  .jobs-toolbar { display: grid; gap: 12px; }
+  .jobs-filter-bar {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.6fr) minmax(150px, 0.9fr) minmax(150px, 0.9fr) minmax(150px, 0.9fr) minmax(150px, 0.9fr) auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .jobs-filter-bar .field { min-width: 0; }
+  .jobs-filter-actions { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+  .jobs-table-card { padding: 24px; }
+  .jobs-table-wrap { margin-top: 8px; overflow-x: auto; }
+  .jobs-table { min-width: 1120px; }
+  .jobs-table td, .jobs-table th { vertical-align: middle; }
+  .job-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .job-meta { color: var(--muted); }
+  .job-form-note { max-width: 78ch; }
+  .job-badge {
+    display: inline-flex; align-items: center; gap: 6px; width: fit-content; padding: 6px 10px;
+    border-radius: 999px; background: var(--primary-soft); color: var(--primary-2);
+    font-size: .84rem; font-weight: 700; white-space: nowrap;
+  }
+  .job-badge--green { background: rgba(236,253,245,1); color: #047857; }
+  .job-badge--slate { background: rgba(241,245,249,1); color: #475569; }
+  .job-badge--amber { background: rgba(255,251,235,1); color: #b45309; }
+  .job-badge--rose { background: rgba(254,242,242,1); color: #b91c1c; }
+  .job-modal-field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .job-modal-field-row--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .job-form-grid { display: grid; gap: 12px; }
+  .job-form-grid .field.full { grid-column: 1 / -1; }
+  .job-form-grid textarea {
+    width: 100%; min-height: 120px; padding: 14px 16px; border-radius: 16px;
+    border: 1px solid #bfd2ff; background: #fff; color: #0f172a; outline: none;
+    font: inherit; resize: vertical;
+  }
+  .job-form-grid textarea::placeholder { color: #94a3b8; }
+  .job-modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 8px; }
+  .modal { position: fixed; inset: 0; display: none; z-index: 80; }
+  .modal.is-open { display: block; }
+  .modal-overlay {
+    position: absolute; inset: 0; background: rgba(15, 23, 42, .45); backdrop-filter: blur(4px);
+  }
+  .modal-panel {
+    position: relative; max-width: 1120px; width: calc(100% - 32px); margin: 28px auto;
+    max-height: calc(100vh - 56px); overflow: auto; background: #fff; border-radius: 24px;
+    border: 1px solid rgba(191,210,255,.9); box-shadow: 0 24px 60px rgba(15,23,42,.18);
+  }
+  .modal-panel--wide { padding: 22px; }
+  .modal-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+  .modal-head h2 { margin: 8px 0 6px; font-size: 1.35rem; }
+  .modal-head p { margin: 0; color: var(--muted); max-width: 780px; }
+  .modal-close {
+    width: 42px; height: 42px; border-radius: 14px; border: 1px solid var(--line-strong);
+    background: #fff; color: var(--primary-2); font-size: 1.4rem; line-height: 1; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  .job-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .job-summary-item { background: #f8fbff; border: 1px solid #e6eeff; border-radius: 16px; padding: 14px; }
+  .job-summary-item span { display: block; color: var(--muted); font-size: .8rem; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+  .job-summary-item strong { display: block; color: var(--text); font-size: 1rem; line-height: 1.45; }
+  .job-desc, .job-requirements {
+    border: 1px solid #e6eeff; border-radius: 18px; background: #fff; padding: 16px; margin-top: 14px;
+  }
+  .job-desc h3, .job-requirements h3 { margin: 0 0 10px; font-size: 1rem; }
+  .job-desc p, .job-requirements p { margin: 0; color: var(--muted); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  @media (max-width: 1100px) {
+    .jobs-filter-bar { grid-template-columns: 1fr 1fr; }
+    .jobs-filter-actions { grid-column: 1 / -1; }
+    .job-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .job-modal-field-row { grid-template-columns: 1fr; }
+    .job-modal-field-row--three { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 720px) {
+    .jobs-table-card { padding: 16px; }
+    .jobs-filter-bar { grid-template-columns: 1fr; }
+    .job-summary { grid-template-columns: 1fr; }
+    .modal-panel--wide { padding: 16px; }
+    .modal-panel { width: calc(100% - 20px); margin: 10px auto; max-height: calc(100vh - 20px); }
+  }
+</style>
+
+<section class="admin-page jobs-page">
+  <div class="admin-hero">
+    <div>
+      <span class="eyebrow">Jobs</span>
+      <h1>Quản lý tin tuyển dụng</h1>
+      <p>Đây là CRUD cho bảng <code>job_postings</code>: tạo mới, sửa nội dung, đổi trạng thái, gắn tag và xóa khi cần.</p>
+    </div>
+    <div class="admin-hero-actions">
+      <button class="btn" type="button" id="open-job-modal" data-mode="create">Tạo job mới</button>
+    </div>
+  </div>
+
+  <div class="admin-stats">
+    <article class="stat-card"><span>Total</span><strong>{{ total_jobs }}</strong><p>Tổng số job</p></article>
+    <article class="stat-card"><span>Draft</span><strong>{{ jobs | selectattr('status', 'equalto', 'draft') | list | length }}</strong><p>Tin nháp</p></article>
+    <article class="stat-card"><span>Published</span><strong>{{ jobs | selectattr('status', 'equalto', 'published') | list | length }}</strong><p>Đang đăng</p></article>
+    <article class="stat-card"><span>Closed</span><strong>{{ jobs | selectattr('status', 'equalto', 'closed') | list | length }}</strong><p>Đã đóng</p></article>
+  </div>
+
+  <section class="admin-card jobs-table-card">
+    <div class="admin-card-head admin-card-head--stacked">
+      <div>
+        <h2>Danh sách tin tuyển dụng</h2>
+        <p>Danh sách này phản ánh đúng bảng <code>job_postings</code> và mối liên kết với company, recruiter, tag.</p>
+      </div>
+      <div class="page-summary">
+        <span class="admin-pill admin-pill--slate">{{ total_jobs }} records</span>
+      </div>
+    </div>
+
+    <div class="jobs-toolbar">
+      <form method="get" class="jobs-filter-bar">
+        <label class="field full">
+          <span>Từ khóa</span>
+          <input name="q" value="{{ filter_q }}" placeholder="Title, slug, location, summary...">
+        </label>
+        <label class="field">
+          <span>Trạng thái</span>
+          <select name="status">
+            <option value="">Tất cả</option>
+            {% for status in job_status_options %}
+              <option value="{{ status }}" {% if filter_status == status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field">
+          <span>Company</span>
+          <select name="company_id">
+            <option value="">Tất cả</option>
+            {% for company in companies %}
+              <option value="{{ company.id }}" {% if filter_company_id == company.id %}selected{% endif %}>{{ company.company_name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field">
+          <span>Tag</span>
+          <select name="tag_id">
+            <option value="">Tất cả</option>
+            {% for tag in tags %}
+              <option value="{{ tag.id }}" {% if filter_tag_id == tag.id %}selected{% endif %}>{{ tag.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field">
+          <span>Featured</span>
+          <select name="featured">
+            <option value="">Tất cả</option>
+            <option value="1" {% if filter_featured == '1' %}selected{% endif %}>Có</option>
+            <option value="0" {% if filter_featured == '0' %}selected{% endif %}>Không</option>
+          </select>
+        </label>
+        <div class="jobs-filter-actions">
+          <button class="btn" type="submit">Áp dụng</button>
+          <a class="btn-outline" href="{{ url_for('admin.jobs') }}">Xóa lọc</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="table-wrap jobs-table-wrap">
+      <table class="table jobs-table">
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Job</th>
+            <th>Company</th>
+            <th>Thông tin</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>
+                <div class="user-cell">
+                  <div class="user-avatar"><span>{{ job.title[:1] if job.title else 'J' }}</span></div>
+                  <div>
+                    <strong>{{ job.title }}</strong><br>
+                    <small>{{ job.slug }}</small>
+                    <div class="job-tags">
+                      <span class="job-badge job-badge--slate">{{ job.workplace_type or 'onsite' }}</span>
+                      <span class="job-badge job-badge--slate">{{ job.employment_type or 'full-time' }}</span>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <strong>{{ job.company.company_name if job.company else 'N/A' }}</strong><br>
+                <small>{{ job.company.industry if job.company and job.company.industry else 'Chưa có ngành' }}</small>
+              </td>
+              <td>
+                <div class="job-meta">{{ job.location or 'Chưa có địa điểm' }}</div>
+                <div class="job-meta">{{ job.experience_level or 'N/A' }} | {{ job.vacancy_count or 1 }} vị trí</div>
+                <div class="job-meta">{{ job.salary_min or 0 }} - {{ job.salary_max or 0 }} {{ job.salary_currency or 'VND' }}</div>
+                <div class="job-tags">
+                  {% for tag in job.tags[:3] %}
+                    <span class="job-badge">{{ tag.name }}</span>
+                  {% else %}
+                    <span class="job-badge job-badge--slate">Chưa có tag</span>
+                  {% endfor %}
+                </div>
+              </td>
+              <td>
+                {% if job.status == 'published' %}
+                  <span class="job-badge job-badge--green">published</span>
+                {% elif job.status == 'draft' %}
+                  <span class="job-badge job-badge--amber">draft</span>
+                {% else %}
+                  <span class="job-badge job-badge--rose">closed</span>
+                {% endif %}
+                <div class="job-meta" style="margin-top: 8px;">{{ 'Featured' if job.is_featured else 'Normal' }}</div>
+                <div class="job-meta">{{ job.published_at.strftime('%d/%m/%Y %H:%M') if job.published_at else 'Chưa đăng' }}</div>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <a class="btn-small btn-outline action-btn" href="{{ url_for('admin.jobs', edit=job.id, q=filter_q, status=filter_status, company_id=filter_company_id, tag_id=filter_tag_id, featured=filter_featured) }}">
+                    <span class="action-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 20h4l10-10-4-4L4 16v4Z"></path>
+                        <path d="m13 7 4 4"></path>
+                      </svg>
+                    </span>
+                    <span>Sửa</span>
+                  </a>
+                  <form method="post" onsubmit="return confirm('Xóa tin tuyển dụng này?');">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="job_id" value="{{ job.id }}">
+                    <button class="btn-small btn-danger action-btn" type="submit">
+                      <span class="action-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M3 6h18"></path>
+                          <path d="M8 6V4h8v2"></path>
+                          <path d="M6 6l1 14h10l1-14"></path>
+                        </svg>
+                      </span>
+                      <span>Xóa</span>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6"><div class="empty-state">Chưa có tin tuyển dụng nào.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+
+<div class="modal {% if edit_job %}is-open{% endif %}" id="job-modal" aria-hidden="{{ 'false' if edit_job else 'true' }}">
+  <div class="modal-overlay" data-close-job-modal></div>
+  <div class="modal-panel modal-panel--wide" role="dialog" aria-modal="true" aria-labelledby="job-modal-title">
+    <div class="modal-head">
+      <div>
+        <span class="eyebrow eyebrow--compact">Job form</span>
+        <h2 id="job-modal-title">{{ 'Chỉnh sửa job' if edit_job else 'Tạo job mới' }}</h2>
+        <p class="job-form-note">Job phải chọn company, sau đó hệ thống sẽ tự đồng bộ recruiter_user_id từ company để bảo toàn dữ liệu.</p>
+      </div>
+      <button type="button" class="modal-close" data-close-job-modal>&times;</button>
+    </div>
+
+    <form method="post" class="admin-form job-form-grid" id="job-form">
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="job_id" value="{{ edit_job.id if edit_job else '' }}">
+
+      <div class="job-modal-field-row">
+        <label class="field">
+          <span>Company</span>
+          <select name="company_id" id="job-company" required>
+            <option value="">Chọn company</option>
+            {% for company in companies %}
+              <option value="{{ company.id }}" {% if edit_job and edit_job.company_id == company.id %}selected{% endif %}>{{ company.company_name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field">
+          <span>Trạng thái</span>
+          <select name="status" id="job-status">
+            {% for status in job_status_options %}
+              <option value="{{ status }}" {% if edit_job and edit_job.status == status %}selected{% elif not edit_job and status == 'draft' %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <label class="field full"><span>Title</span><input name="title" id="job-title" value="{{ edit_job.title if edit_job else '' }}" required></label>
+      <label class="field full"><span>Slug</span><input name="slug" value="{{ edit_job.slug if edit_job else '' }}" placeholder="auto nếu bỏ trống"></label>
+      <div class="job-modal-field-row">
+        <label class="field full"><span>Summary</span><textarea name="summary" rows="3" placeholder="Mô tả ngắn">{{ edit_job.summary if edit_job and edit_job.summary else '' }}</textarea></label>
+        <label class="field full"><span>Description</span><textarea name="description" rows="5" required>{{ edit_job.description if edit_job else '' }}</textarea></label>
+      </div>
+      <div class="job-modal-field-row">
+        <label class="field full"><span>Requirements</span><textarea name="requirements" rows="5" required>{{ edit_job.requirements if edit_job else '' }}</textarea></label>
+        <label class="field full"><span>Responsibilities</span><textarea name="responsibilities" rows="5">{{ edit_job.responsibilities if edit_job and edit_job.responsibilities else '' }}</textarea></label>
+      </div>
+
+      <div class="job-modal-field-row job-modal-field-row--three">
+        <label class="field"><span>Location</span><input name="location" value="{{ edit_job.location if edit_job else '' }}" required></label>
+        <label class="field"><span>Workplace type</span>
+          <select name="workplace_type">
+            {% for value in ['onsite', 'hybrid', 'remote'] %}
+              <option value="{{ value }}" {% if edit_job and edit_job.workplace_type == value %}selected{% elif not edit_job and value == 'onsite' %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field"><span>Employment type</span>
+          <select name="employment_type">
+            {% for value in ['full-time', 'part-time', 'contract', 'internship'] %}
+              <option value="{{ value }}" {% if edit_job and edit_job.employment_type == value %}selected{% elif not edit_job and value == 'full-time' %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <div class="job-modal-field-row job-modal-field-row--three">
+        <label class="field"><span>Experience level</span>
+          <select name="experience_level">
+            {% for value in ['intern', 'junior', 'middle', 'senior'] %}
+              <option value="{{ value }}" {% if edit_job and edit_job.experience_level == value %}selected{% elif not edit_job and value == 'junior' %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field"><span>Salary currency</span><input name="salary_currency" value="{{ edit_job.salary_currency if edit_job else 'VND' }}"></label>
+        <label class="field"><span>Deadline</span><input type="date" name="deadline" value="{{ edit_job.deadline.strftime('%Y-%m-%d') if edit_job and edit_job.deadline else '' }}"></label>
+      </div>
+
+      <div class="job-modal-field-row job-modal-field-row--three">
+        <label class="field"><span>Salary min</span><input type="number" min="0" name="salary_min" value="{{ edit_job.salary_min if edit_job and edit_job.salary_min is not none else '' }}"></label>
+        <label class="field"><span>Salary max</span><input type="number" min="0" name="salary_max" value="{{ edit_job.salary_max if edit_job and edit_job.salary_max is not none else '' }}"></label>
+        <label class="field"><span>Vacancy count</span><input type="number" min="1" name="vacancy_count" value="{{ edit_job.vacancy_count if edit_job and edit_job.vacancy_count else 1 }}"></label>
+      </div>
+
+      <label class="field full"><span>Tags</span>
+        <select name="tag_ids" multiple size="6">
+          {% for tag in tags %}
+            <option value="{{ tag.id }}" {% if edit_job and tag.id in (edit_job.tags | map(attribute='id') | list) %}selected{% endif %}>{{ tag.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <div class="job-modal-field-row">
+        <label class="field"><span>Featured</span>
+          <select name="is_featured" id="job-featured">
+            <option value="0" {% if edit_job and not edit_job.is_featured %}selected{% elif not edit_job %}selected{% endif %}>Không</option>
+            <option value="1" {% if edit_job and edit_job.is_featured %}selected{% endif %}>Có</option>
+          </select>
+        </label>
+        <div class="field">
+          <span>Ghi chú</span>
+          <div class="job-badge job-badge--slate">Company sẽ tự kéo recruiter_user_id</div>
+        </div>
+      </div>
+
+      <div class="job-modal-actions">
+        <button class="btn-outline" type="button" data-close-job-modal>Đóng</button>
+        <button class="btn" type="submit">{{ 'Cập nhật job' if edit_job else 'Tạo job' }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  const modal = document.getElementById('job-modal');
+  const openBtn = document.getElementById('open-job-modal');
+  const closeButtons = document.querySelectorAll('[data-close-job-modal]');
+  const titleInput = document.getElementById('job-title');
+  const slugInput = document.querySelector('input[name="slug"]');
+  const editing = {{ 'true' if edit_job else 'false' }};
+
+  function openModal() {
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeModal() {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  if (openBtn) {
+    openBtn.addEventListener('click', openModal);
+  }
+
+  closeButtons.forEach(btn => btn.addEventListener('click', closeModal));
+
+  modal.addEventListener('click', (event) => {
+    if (event.target.classList.contains('modal-overlay')) {
+      closeModal();
+    }
+  });
+
+  if (titleInput && slugInput) {
+    titleInput.addEventListener('input', () => {
+      if (!slugInput.value && titleInput.value.trim()) {
+        slugInput.value = titleInput.value
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9\u00C0-\u1EF9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      }
+    });
+  }
+
+  if (editing) {
+    openModal();
+  }
+})();
+</script>
+{% endblock %}
