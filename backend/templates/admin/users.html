@@ -1,0 +1,315 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<section class="admin-page admin-page--users">
+  <div class="admin-hero">
+    <div>
+      <span class="eyebrow">Users</span>
+      <h1>Quản lý tài khoản</h1>
+      <p>Danh sách được phân trang để dễ theo dõi. Tạo mới và chỉnh sửa đều mở trong modal, avatar upload file trực tiếp.</p>
+    </div>
+    <div class="admin-hero-actions">
+      <button class="btn" type="button" id="open-user-modal" data-mode="create">Tạo tài khoản mới</button>
+    </div>
+  </div>
+
+  <div class="admin-stats">
+    <article class="stat-card"><span>Total</span><strong>{{ total_users }}</strong><p>Tổng số tài khoản</p></article>
+    <article class="stat-card"><span>Admin</span><strong>{{ role_counts.admin }}</strong><p>Vai trò hỗ trợ</p></article>
+    <article class="stat-card"><span>Recruiter</span><strong>{{ role_counts.recruiter }}</strong><p>Nhà tuyển dụng</p></article>
+    <article class="stat-card"><span>Candidate</span><strong>{{ role_counts.candidate }}</strong><p>Ứng viên</p></article>
+    <article class="stat-card"><span>Active</span><strong>{{ role_counts.active }}</strong><p>Tài khoản đang hoạt động</p></article>
+    <article class="stat-card"><span>Locked</span><strong>{{ role_counts.locked }}</strong><p>Tài khoản bị khóa</p></article>
+  </div>
+
+  <section class="admin-card users-table-card">
+    <div class="admin-card-head admin-card-head--stacked">
+      <div>
+        <h2>Danh sách tài khoản</h2>
+        <p>Trang hiện tại: {{ pagination.page }} / {{ pagination.pages or 1 }}. Hiển thị {{ users|length }} / {{ pagination.total }} tài khoản.</p>
+      </div>
+      <div class="page-summary">
+        <span class="admin-pill admin-pill--slate">{{ pagination.total }} records</span>
+      </div>
+    </div>
+
+    <div class="table-wrap users-table-wrap">
+      <table class="table users-table">
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Người dùng</th>
+            <th>Vai trò</th>
+            <th>Trạng thái</th>
+            <th>Liên hệ</th>
+            <th>Đăng nhập</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+            <tr>
+              <td>{{ ((pagination.page - 1) * pagination.per_page) + loop.index }}</td>
+              <td>
+                <div class="user-cell">
+                  <div class="user-avatar">
+                    {% if user.avatar_url %}
+                      <img src="{{ user.avatar_url }}" alt="{{ user.full_name }}">
+                    {% else %}
+                      <span>{{ user.full_name[:1] if user.full_name else 'U' }}</span>
+                    {% endif %}
+                  </div>
+                  <div>
+                    <strong>{{ user.full_name }}</strong><br>
+                    <small>{{ user.email }}</small>
+                  </div>
+                </div>
+              </td>
+              <td><span class="admin-pill">{{ user.role }}</span></td>
+              <td>
+                {% if user.status == 'active' %}
+                  <span class="admin-pill admin-pill--green">active</span>
+                {% else %}
+                  <span class="admin-pill admin-pill--red">locked</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="subtle">{{ user.phone or 'Chưa có phone' }}</div>
+                <div class="subtle">{{ 'Verified' if user.email_verified else 'Not verified' }}</div>
+              </td>
+              <td>
+                <div class="subtle">{{ user.auth_method_preference or 'password' }}</div>
+                <div class="subtle">{{ user.last_login_at.strftime('%d/%m/%Y %H:%M') if user.last_login_at else 'Chưa đăng nhập' }}</div>
+              </td>
+              <td>
+                <div class="row-actions row-actions--tight">
+                  <a class="btn-small btn-outline action-btn" href="{{ url_for('admin.users', page=pagination.page, edit=user.id) }}">
+                    <span class="action-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 20h4l10-10-4-4L4 16v4Z"></path>
+                        <path d="m13 7 4 4"></path>
+                      </svg>
+                    </span>
+                    <span>Sửa</span>
+                  </a>
+                  <form method="post">
+                    <input type="hidden" name="action" value="toggle">
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <button class="btn-small btn-outline action-btn" type="submit">
+                      <span class="action-icon" aria-hidden="true">
+                        {% if user.status == 'active' %}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+                            <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
+                          </svg>
+                        {% else %}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+                            <path d="M8 11V8a4 4 0 0 1 7.2-2.4"></path>
+                            <path d="M10 15h0"></path>
+                          </svg>
+                        {% endif %}
+                      </span>
+                      <span>{{ 'Khóa' if user.status == 'active' else 'Mở' }}</span>
+                    </button>
+                  </form>
+                  <form method="post" onsubmit="return confirm('Xóa tài khoản này?');">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <button class="btn-small btn-danger action-btn" type="submit">
+                      <span class="action-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M3 6h18"></path>
+                          <path d="M8 6V4h8v2"></path>
+                          <path d="M6 6l1 14h10l1-14"></path>
+                          <path d="M10 11v5"></path>
+                          <path d="M14 11v5"></path>
+                        </svg>
+                      </span>
+                      <span>Xóa</span>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7"><div class="empty-state">Chưa có tài khoản nào.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+      <div class="pagination">
+        {% if pagination.has_prev %}
+          <a class="btn-outline btn-small" href="{{ url_for('admin.users', page=pagination.prev_num) }}">Trang trước</a>
+        {% endif %}
+        <div class="pagination-numbers">
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if p %}
+              {% if p == pagination.page %}
+                <span class="pagination-current">{{ p }}</span>
+              {% else %}
+                <a class="pagination-link" href="{{ url_for('admin.users', page=p) }}">{{ p }}</a>
+              {% endif %}
+            {% else %}
+              <span class="pagination-ellipsis">…</span>
+            {% endif %}
+          {% endfor %}
+        </div>
+        {% if pagination.has_next %}
+          <a class="btn-outline btn-small" href="{{ url_for('admin.users', page=pagination.next_num) }}">Trang sau</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+</section>
+
+<div class="modal {% if edit_user %}is-open{% endif %}" id="user-modal" aria-hidden="{{ 'false' if edit_user else 'true' }}">
+  <div class="modal-overlay" data-close-user-modal></div>
+  <div class="modal-panel modal-panel--wide" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
+    <div class="modal-head">
+      <div>
+        <span class="eyebrow eyebrow--compact">User form</span>
+        <h2 id="user-modal-title">{{ 'Chỉnh sửa tài khoản' if edit_user else 'Tạo tài khoản mới' }}</h2>
+        <p>Avatar upload file, các field còn lại bám đúng bảng `users`.</p>
+      </div>
+      <button type="button" class="modal-close" data-close-user-modal>&times;</button>
+    </div>
+
+    <form method="post" class="admin-form" enctype="multipart/form-data" id="user-form">
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="user_id" value="{{ edit_user.id if edit_user else '' }}">
+      <div class="avatar-uploader">
+        <div class="avatar-preview" id="avatar-preview">
+          {% if edit_user and edit_user.avatar_url %}
+            <img src="{{ edit_user.avatar_url }}" alt="{{ edit_user.full_name }}">
+          {% else %}
+            <span>{{ edit_user.full_name[:1] if edit_user and edit_user.full_name else 'U' }}</span>
+          {% endif %}
+        </div>
+        <div class="avatar-upload-copy">
+          <label class="field full">
+            <span>Avatar file</span>
+            <input type="file" name="avatar_file" id="avatar-file" accept="image/*">
+          </label>
+          <p class="help-text">Nếu không upload file mới thì avatar cũ sẽ được giữ lại.</p>
+        </div>
+      </div>
+      <div class="form-grid">
+        <label class="field full"><span>Full name</span><input name="full_name" id="user-full-name" value="{{ edit_user.full_name if edit_user else '' }}" required></label>
+        <label class="field"><span>Email</span><input type="email" name="email" id="user-email" value="{{ edit_user.email if edit_user else '' }}" required></label>
+        <label class="field"><span>Password {{ '(để trống nếu không đổi)' if edit_user else '' }}</span><input type="password" name="password" id="user-password" {% if not edit_user %}required{% endif %}></label>
+        <label class="field"><span>Role</span>
+          <select name="role" id="user-role">
+            {% for role in role_options %}
+              <option value="{{ role }}" {% if edit_user and edit_user.role == role %}selected{% endif %}>{{ role }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field"><span>Status</span>
+          <select name="status" id="user-status">
+            {% for status in status_options %}
+              <option value="{{ status }}" {% if edit_user and edit_user.status == status %}selected{% elif not edit_user and status == 'active' %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field"><span>Auth method</span>
+          <select name="auth_method_preference" id="user-auth-method">
+            <option value="password" {% if edit_user and edit_user.auth_method_preference == 'password' %}selected{% elif not edit_user %}selected{% endif %}>password</option>
+            <option value="otp" {% if edit_user and edit_user.auth_method_preference == 'otp' %}selected{% endif %}>otp</option>
+          </select>
+        </label>
+        <label class="field"><span>Phone</span><input name="phone" id="user-phone" value="{{ edit_user.phone if edit_user and edit_user.phone else '' }}"></label>
+        <label class="field full checkbox-row">
+          <input type="checkbox" name="email_verified" id="user-email-verified" {% if edit_user and edit_user.email_verified %}checked{% endif %}>
+          <span>Email verified</span>
+        </label>
+      </div>
+      <div class="admin-actions">
+        <button class="btn" type="submit">{{ 'Cập nhật' if edit_user else 'Tạo tài khoản' }}</button>
+        <button class="btn-outline" type="button" data-close-user-modal>Hủy</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const modal = document.getElementById('user-modal');
+    const openBtn = document.getElementById('open-user-modal');
+    const closeBtns = modal ? modal.querySelectorAll('[data-close-user-modal]') : [];
+    const form = document.getElementById('user-form');
+    const fullName = document.getElementById('user-full-name');
+    const password = document.getElementById('user-password');
+    const avatarInput = document.getElementById('avatar-file');
+    const avatarPreview = document.getElementById('avatar-preview');
+    const editing = {{ 'true' if edit_user else 'false' }};
+
+    function openModal() {
+      if (!modal) return;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeModal() {
+      if (!modal) return;
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function setPlaceholder(name) {
+      const initial = (name || 'U').trim().charAt(0).toUpperCase() || 'U';
+      avatarPreview.innerHTML = `<span>${initial}</span>`;
+    }
+
+    function resetForm() {
+      if (!form) return;
+      form.reset();
+      form.querySelector('input[name="user_id"]').value = '';
+      form.querySelector('input[name="action"]').value = 'save';
+      password.required = true;
+      setPlaceholder('User');
+      document.getElementById('user-modal-title').textContent = 'Tạo tài khoản mới';
+    }
+
+    if (openBtn) {
+      openBtn.addEventListener('click', function () {
+        resetForm();
+        openModal();
+      });
+    }
+
+    closeBtns.forEach(function (btn) {
+      btn.addEventListener('click', closeModal);
+    });
+
+    if (avatarInput) {
+      avatarInput.addEventListener('change', function () {
+        const file = avatarInput.files && avatarInput.files[0];
+        if (!file) {
+          if (!editing) setPlaceholder(fullName ? fullName.value : 'User');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          avatarPreview.innerHTML = `<img src="${event.target.result}" alt="Avatar preview">`;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if (fullName) {
+      fullName.addEventListener('input', function () {
+        if (!avatarInput || !(avatarInput.files && avatarInput.files[0])) {
+          setPlaceholder(fullName.value);
+        }
+      });
+    }
+
+    if (editing) {
+      password.required = false;
+      openModal();
+    }
+  })();
+</script>
+{% endblock %}

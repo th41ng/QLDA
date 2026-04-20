@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  {% include "admin/_head_common.html" %}
+  <title>{{ title or "Admin - Hệ thống việc làm" }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-badge">AP</div>
+      <div>
+        <h2>Admin Panel</h2>
+        <p>Quản trị dữ liệu hệ thống việc làm</p>
+      </div>
+    </div>
+
+    <nav>
+      <a href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('admin.users') }}">Users</a>
+      <a href="{{ url_for('admin.companies') }}">Companies</a>
+      <a href="{{ url_for('admin.jobs') }}">Jobs</a>
+      <a href="{{ url_for('admin.applications') }}">Applications</a>
+      <a href="{{ url_for('admin.resumes') }}">Resumes</a>
+      <a href="{{ url_for('admin.categories') }}">Categories</a>
+      <a href="{{ url_for('admin.tags') }}">Tags</a>
+      <a href="{{ url_for('admin.cv_templates') }}">CV Templates</a>
+      <a href="{{ url_for('admin.logout') }}">Logout</a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span class="pill">{{ current_user.full_name if current_user.is_authenticated else 'Admin' }}</span>
+      <small>{{ current_user.email if current_user.is_authenticated else '' }}</small>
+    </div>
+  </aside>
+
+  <main class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

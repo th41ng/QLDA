@@ -4,6 +4,7 @@ from flask import Flask
 from sqlalchemy import inspect, text
 
 from .api.registry import register_api_blueprints
+from .web.registry import register_web_blueprints
 from .core.config import Config
 from .core.extensions import cors, db, jwt, login_manager, mail, migrate
 from .repositories import get_user_by_id
@@ -23,13 +24,13 @@ def create_app():
         app.config.get("FRONTEND_URLS", ""),
     )
     cors.init_app(app, resources={r"/api/*": {"origins": frontend_origins}}, supports_credentials=True)
-    login_manager.login_view = "admin.login"
 
     @login_manager.user_loader
     def load_user(user_id):
         return get_user_by_id(int(user_id))
 
     register_api_blueprints(app)
+    register_web_blueprints(app)
 
     @app.route("/")
     def index():

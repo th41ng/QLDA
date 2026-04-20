@@ -1,0 +1,19 @@
+﻿<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="login-page">
+  <form class="login-card" method="post">
+    <span class="eyebrow">Admin access</span>
+    <h1>Đăng nhập quản trị</h1>
+    <p>Chỉ tài khoản admin mới có thể truy cập bảng điều khiển backend.</p>
+    <label class="field">Email<input type="email" name="email" required></label>
+    <label class="field">Password<input type="password" name="password" required></label>
+    <button class="btn" type="submit">Login</button>
+  </form>
+</body>
+</html>
