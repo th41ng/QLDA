@@ -1,10 +1,11 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../api";
+import ResumePreviewModal from "../../components/resume/ResumePreviewModal";
 
 const STATUS_OPTIONS = [
   { value: "submitted", label: "Đã gửi" },
   { value: "reviewing", label: "Đang xem xét" },
-  { value: "interview", label: "Phỏng vấn" },
+  { value: "interview", label: "Mời phỏng vấn" },
   { value: "accepted", label: "Đã chấp nhận" },
   { value: "rejected", label: "Từ chối" },
   { value: "withdrawn", label: "Đã rút" },
@@ -20,6 +21,7 @@ export default function RecruiterApplicationsPage() {
   const [activeApp, setActiveApp] = useState(null);
   const [resumeDetail, setResumeDetail] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [previewAppId, setPreviewAppId] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -124,10 +126,10 @@ export default function RecruiterApplicationsPage() {
     ];
   }, [apps]);
 
-  const updateStatus = async (id, status) => {
+  const updateStatus = async (id, payload) => {
     try {
       setBusyId(id);
-      await api.applications.updateStatus(id, status);
+      await api.applications.updateStatus(id, payload);
       await load();
     } catch {
       setError("Không thể cập nhật trạng thái hồ sơ. Vui lòng thử lại.");
@@ -139,6 +141,33 @@ export default function RecruiterApplicationsPage() {
   const selectApplication = (app) => {
     setActiveApp(app);
     setError("");
+  };
+
+  const downloadResume = async (resume, applicationId) => {
+    const remoteUrl = resume?.generated_pdf_path || resume?.stored_path;
+    if (remoteUrl && /^https?:\/\//i.test(remoteUrl)) {
+      window.open(remoteUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    const token = localStorage.getItem("auth_token");
+    const base = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001/api";
+    const response = await fetch(`${base}/applications/${applicationId}/resume/pdf`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) {
+      throw new Error("Không thể tải PDF.");
+    }
+
+    const blob = await response.blob();
+    const objectUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = `${resume?.title || `resume-${applicationId}`}.pdf`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60_000);
   };
 
   return (
@@ -252,10 +281,19 @@ export default function RecruiterApplicationsPage() {
               resumeDetail={resumeDetail}
               busy={busyId === activeApp.id}
               onUpdateStatus={updateStatus}
+              onPreview={() => setPreviewAppId(activeApp.id)}
             />
           )}
         </aside>
       </div>
+
+      {previewAppId ? (
+        <ResumePreviewModal
+          resume={resumeDetail?.resume || activeApp?.resume || null}
+          onClose={() => setPreviewAppId(null)}
+          onDownload={(resume) => downloadResume(resume, previewAppId)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -305,10 +343,25 @@ function ApplicationCard({ application, selected, onSelect, resumeDetail }) {
   );
 }
 
-function ApplicationDetail({ application, resumeDetail, busy, onUpdateStatus }) {
-  const availableActions = STATUS_OPTIONS.filter((opt) => ["accepted", "rejected", "interview", "reviewing"].includes(opt.value));
-  const cvName = application.resume?.title || resumeDetail?.resume?.title || "CV online";
-  const cvLink = resumeDetail?.resume?.stored_path || null;
+function ApplicationDetail({ application, resumeDetail, busy, onUpdateStatus, onPreview }) {
+  const resume = resumeDetail?.resume || application.resume || null;
+  const cvName = resume?.title || "CV online";
+  const cvLink = resume?.stored_path || null;
+  const isStructuredResume = resume?.source_type === "manual" && Boolean(resume?.structured_json);
+  const status = (application.status || "").toLowerCase();
+  const isInterview = status === "interview";
+  const isRejected = status === "rejected";
+  const [decisionReason, setDecisionReason] = useState(application.recruiter_note || "");
+
+  useEffect(() => {
+    setDecisionReason(application.recruiter_note || "");
+  }, [application.id, application.recruiter_note]);
+
+  const submitDecision = (nextStatus) => {
+    const reason = decisionReason.trim();
+    if (!reason) return;
+    onUpdateStatus(application.id, { status: nextStatus, reason });
+  };
 
   return (
     <div className="recruiter-detail-body">
@@ -321,55 +374,83 @@ function ApplicationDetail({ application, resumeDetail, busy, onUpdateStatus }) 
       </section>
 
       <section className="recruiter-detail-section recruiter-detail-card">
-        <h3>Thông tin ứng viên</h3>
-        <div className="recruiter-detail-grid">
-          <DetailItem label="Tên" value={application.candidate?.full_name || "Ứng viên"} />
-          <DetailItem label="Email" value={application.candidate?.email || "Chưa có email"} />
-        </div>
-      </section>
-
-      <section className="recruiter-detail-section recruiter-detail-card">
         <h3>Thông tin ứng tuyển</h3>
         <div className="recruiter-detail-grid">
+          <DetailItem label="Ứng viên" value={application.candidate?.full_name || "Ứng viên"} />
+          <DetailItem label="Email" value={application.candidate?.email || "Chưa có email"} />
           <DetailItem label="Vị trí" value={application.job?.title || "Chưa có vị trí"} />
           <DetailItem label="Địa điểm" value={application.job?.location || "Chưa cập nhật"} />
           <DetailItem label="Ngày nộp" value={formatDate(application.applied_at)} />
-          <DetailItem
-            label="Trạng thái"
-            value={STATUS_OPTIONS.find((item) => item.value === (application.status || "").toLowerCase())?.label || "Đã gửi"}
-          />
         </div>
       </section>
 
       <section className="recruiter-detail-section recruiter-detail-card">
         <div className="dashboard-card-head recruiter-detail-inline-head">
-          <h3>CV</h3>
-          {cvLink ? (
-            <a className="icon-btn" href={cvLink} target="_blank" rel="noreferrer">
-              Tải CV
-            </a>
-          ) : null}
+          <h3>Hồ sơ CV</h3>
+          <div style={{ display: "flex", gap: "8px" }}>
+            {resume ? (
+              <button type="button" className="icon-btn" onClick={onPreview}>
+                Xem CV
+              </button>
+            ) : null}
+            {cvLink && !isStructuredResume ? (
+              <a className="icon-btn" href={cvLink} target="_blank" rel="noreferrer">Tải CV</a>
+            ) : null}
+          </div>
         </div>
         <div className="recruiter-detail-grid recruiter-detail-grid--single">
           <DetailItem label="Tên CV" value={cvName} />
+          <DetailItem label="Loại" value={isStructuredResume ? "CV tạo từ mẫu" : "CV tải lên"} />
         </div>
       </section>
 
       <section className="recruiter-detail-section recruiter-detail-card">
-        <h3>Thao tác</h3>
-        <div className="recruiter-detail-actions">
-          {availableActions.map((opt) => (
+        <h3>Quyết định tuyển dụng</h3>
+        {status === "submitted" ? (
+          <div className="recruiter-detail-actions">
             <button
-              key={opt.value}
               className="btn btn-small"
               type="button"
-              onClick={() => onUpdateStatus(application.id, opt.value)}
+              onClick={() => onUpdateStatus(application.id, "reviewing")}
               disabled={busy}
             >
-              {busy ? "Đang cập nhật..." : opt.label}
+              {busy ? "Đang cập nhật..." : "Chuyển sang Đang xem xét"}
             </button>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <>
+            <label className="recruiter-editor-field recruiter-editor-field--full" style={{ marginBottom: "12px" }}>
+              <span>Lý do / nội dung gửi ứng viên</span>
+              <textarea
+                value={decisionReason}
+                onChange={(event) => setDecisionReason(event.target.value)}
+                rows={4}
+                placeholder="Ví dụ: Hồ sơ phù hợp, mời bạn tham gia phỏng vấn vào tuần này..."
+              />
+            </label>
+            <div className="recruiter-app-muted" style={{ marginBottom: "12px" }}>
+              Nội dung này sẽ được lưu trong database, hiển thị trên web ứng viên và gửi qua email.
+            </div>
+            <div className="recruiter-detail-actions">
+              <button
+                className={isInterview ? "recruiter-action-btn recruiter-action-btn--interview recruiter-action-btn--active" : "recruiter-action-btn recruiter-action-btn--interview"}
+                type="button"
+                onClick={() => submitDecision("interview")}
+                disabled={busy || isInterview || !decisionReason.trim()}
+              >
+                {busy && !isRejected ? "Đang cập nhật..." : isInterview ? "Đã mời phỏng vấn" : "Mời phỏng vấn"}
+              </button>
+              <button
+                className={isRejected ? "recruiter-action-btn recruiter-action-btn--reject recruiter-action-btn--active" : "recruiter-action-btn recruiter-action-btn--reject"}
+                type="button"
+                onClick={() => submitDecision("rejected")}
+                disabled={busy || isRejected || !decisionReason.trim()}
+              >
+                {busy && !isInterview ? "Đang cập nhật..." : isRejected ? "Đã từ chối" : "Từ chối"}
+              </button>
+            </div>
+          </>
+        )}
       </section>
     </div>
   );
