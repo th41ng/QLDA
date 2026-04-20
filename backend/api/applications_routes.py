@@ -8,6 +8,10 @@ from . import json_error, json_ok, role_required
 from ..core.extensions import db
 from ..models import Application, JobPosting, Notification, Resume, Tag, User
 from ..services.mail_service import send_mail
+from ..services.application_service import (
+    update_application_status as update_application_status_service,
+    ApplicationServiceError,
+)
 
 api_applications_bp = Blueprint("api_applications", __name__)
 
@@ -91,11 +95,9 @@ def _application_to_dict(application: Application):
 
 def _build_status_message(status: str, job_title: str, reason: str | None = None):
     title_map = {
-        "interview": "Bạn đã được mời phỏng vấn",
         "rejected": "Kết quả hồ sơ ứng tuyển",
     }
     message_map = {
-        "interview": f"Nhà tuyển dụng đã mời bạn phỏng vấn cho vị trí {job_title}.",
         "rejected": f"Hồ sơ của bạn cho vị trí {job_title} đã bị từ chối.",
     }
     title = title_map.get(status, "Cập nhật hồ sơ ứng tuyển")
@@ -312,36 +314,29 @@ def recruiter_application_resume_pdf(application_id):
 @role_required("recruiter", "admin")
 def update_application_status(application_id):
     user_id = int(get_jwt_identity())
-    data = request.get_json(force=True) or {}
-    status = (data.get("status") or "").strip().lower()
-    if status not in {"submitted", "reviewing", "interview", "accepted", "rejected", "withdrawn"}:
-        return json_error("Invalid status.", 400)
+    
+    try:
+        data = request.get_json(force=True) or {}
+    except Exception:
+        return json_error("Invalid JSON request body.", 400)
+    
+    status = (data.get("status") or "").strip()
     reason = (data.get("reason") or data.get("recruiter_note") or "").strip() or None
 
-    app = (
-        Application.query.join(JobPosting, JobPosting.id == Application.job_id)
-        .filter(Application.id == application_id, JobPosting.recruiter_user_id == user_id)
-        .first()
-    )
-    if not app:
-        return json_error("Application not found.", 404)
-
-    if status in {"interview", "rejected"} and not reason:
-        return json_error("Reason is required for this status.", 400)
-
-    app.status = status
-    if reason is not None:
-        app.recruiter_note = reason
-    elif status in {"interview", "rejected"}:
-        app.recruiter_note = None
-
-    if status in {"interview", "rejected"}:
-        try:
-            _notify_candidate_for_status(app, reason)
-        except Exception:
-            db.session.rollback()
-            current_app.logger.exception("Failed to notify candidate for application status update")
-            return json_error("Unable to send notification for this application update.", 502)
-
-    db.session.commit()
-    return json_ok(_application_to_dict(app), "Application updated")
+    try:
+        app = update_application_status_service(
+            application_id=application_id,
+            recruiter_user_id=user_id,
+            status=status,
+            reason=reason
+        )
+        return json_ok(_application_to_dict(app), "Application updated")
+    except ApplicationServiceError as e:
+        if "not found" in str(e).lower():
+            return json_error(str(e), 404)
+        else:
+            return json_error(str(e), 400)
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to update application status")
+        return json_error("Unable to update application status.", 502)
