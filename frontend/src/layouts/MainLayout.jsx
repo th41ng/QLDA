@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { AUTH_ACTIONS, FOOTER_LINKS, HEADER_NAV, ROLE_NAV, ROUTES, authRoute } from "../routes";
 import CandidateHeader from "./CandidateHeader";
 import RecruiterHeader from "./RecruiterHeader";
-import AdminHeader from "./AdminHeader";
+
 
 export default function MainLayout({ children }) {
   const { user, logout } = useAuth();
@@ -14,15 +14,12 @@ export default function MainLayout({ children }) {
   const authRole = onAuthPage && authSearch.get("role") === "recruiter" ? "recruiter" : "candidate";
   const useCandidateHeader = user?.role === "candidate";
   const useRecruiterHeader = user?.role === "recruiter";
-  const useAdminHeader = user?.role === "admin";
   const roleNav = ROLE_NAV[user?.role] || [];
   const headerNav = user ? [...HEADER_NAV, ...roleNav] : HEADER_NAV;
 
   return (
     <div className="app-shell">
-      {useAdminHeader ? (
-        <AdminHeader />
-      ) : useRecruiterHeader ? (
+      {useRecruiterHeader ? (
         <RecruiterHeader />
       ) : useCandidateHeader ? (
         <CandidateHeader />
