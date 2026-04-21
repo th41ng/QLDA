@@ -4,6 +4,7 @@ import { AUTH_ACTIONS, FOOTER_LINKS, HEADER_NAV, ROLE_NAV, ROUTES, authRoute } f
 import CandidateHeader from "./CandidateHeader";
 import RecruiterHeader from "./RecruiterHeader";
 
+
 export default function MainLayout({ children }) {
   const { user, logout } = useAuth();
   const location = useLocation();

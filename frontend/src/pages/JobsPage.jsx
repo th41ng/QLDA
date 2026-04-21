@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api";
 import { ROUTES } from "../routes";
 import LandingJobCard from "../components/landing/LandingJobCard";
+import { Skeleton, SkeletonJobCard } from "../components/Skeleton";
 
 const PAGE_SIZE = 6;
 const SORT_OPTIONS = [
@@ -164,15 +165,15 @@ export default function JobsPage() {
         </div>
         <div className="jobs-hero-metrics">
           <article>
-            <strong>{loading ? "..." : sortedJobs.length}</strong>
+            <strong>{loading ? <Skeleton className="skeleton-line" width="72px" height="20px" /> : sortedJobs.length}</strong>
             <span>Việc làm phù hợp</span>
           </article>
           <article>
-            <strong>{loading ? "..." : industryOptions.length}</strong>
+            <strong>{loading ? <Skeleton className="skeleton-line" width="72px" height="20px" /> : industryOptions.length}</strong>
             <span>Ngành nghề</span>
           </article>
           <article>
-            <strong>{loading ? "..." : tagOptions.length}</strong>
+            <strong>{loading ? <Skeleton className="skeleton-line" width="72px" height="20px" /> : tagOptions.length}</strong>
             <span>Tag nổi bật</span>
           </article>
         </div>
@@ -303,7 +304,11 @@ export default function JobsPage() {
           </div>
 
           {loading ? (
-            <div className="jobs-empty panel">Đang tải dữ liệu tin tuyển dụng...</div>
+            <div className="jobs-results-grid">
+              {Array.from({ length: 6 }, (_, index) => (
+                <SkeletonJobCard key={index} />
+              ))}
+            </div>
           ) : pageJobs.length ? (
             <>
               <div className="jobs-results-grid">

@@ -10,6 +10,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS match_scores;
 DROP TABLE IF EXISTS otp_codes;
+DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS applications;
 DROP TABLE IF EXISTS resume_tags;
 DROP TABLE IF EXISTS job_tags;
@@ -271,7 +272,7 @@ CREATE TABLE applications (
   job_id INT NOT NULL,
   resume_id INT NOT NULL,
   cover_letter LONGTEXT,
-  status ENUM('submitted', 'reviewing', 'interview', 'accepted', 'rejected', 'withdrawn') NOT NULL DEFAULT 'submitted',
+  status ENUM('submitted', 'reviewing', 'accepted', 'rejected') NOT NULL DEFAULT 'submitted',
   recruiter_note TEXT,
   applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -280,6 +281,20 @@ CREATE TABLE applications (
   CONSTRAINT fk_app_resume FOREIGN KEY (resume_id) REFERENCES resumes(id) ON DELETE CASCADE,
   CONSTRAINT uq_candidate_job UNIQUE (candidate_user_id, job_id),
   INDEX idx_app_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  message TEXT NOT NULL,
+  type VARCHAR(50) NOT NULL DEFAULT 'info',
+  link_url VARCHAR(255),
+  is_read TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_notifications_user (user_id),
+  INDEX idx_notifications_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE otp_codes (
@@ -767,6 +782,264 @@ VALUES
     88.00,
     JSON_OBJECT('skill', 40, 'experience', 18, 'industry', 15, 'location', 15)
   );
+
+-- Chuẩn hóa dữ liệu tiếng Việt có dấu và cập nhật logo công ty cho recruiter chính
+
+UPDATE cv_templates
+SET
+  summary = 'Mẫu CV hiện đại cho ứng viên công nghệ',
+  description = 'Bố cục hiện đại, phù hợp cho lập trình viên, product và tech role.'
+WHERE id = 1;
+
+UPDATE cv_templates
+SET
+  summary = 'Thiết kế tối giản tối ưu cho hệ thống ATS',
+  description = 'Mẫu CV gọn, sạch, ưu tiên khả năng đọc máy và phỏng vấn nhanh.'
+WHERE id = 2;
+
+UPDATE cv_templates
+SET
+  summary = 'Mẫu CV sáng tạo cho thiết kế và marketing',
+  description = 'Thích hợp cho ứng viên thiên về sáng tạo nhưng vẫn giữ bố cục rõ ràng.'
+WHERE id = 3;
+
+UPDATE cv_templates
+SET
+  summary = 'Phù hợp cho UI/UX và product designer',
+  description = 'Tập trung vào portfolio, case study và trải nghiệm sản phẩm.'
+WHERE id = 4;
+
+UPDATE cv_templates
+SET
+  summary = 'Tập trung vào dữ liệu, bảng biểu và KPI',
+  description = 'Dành cho ứng viên phân tích dữ liệu, reporting và insight-driven work.'
+WHERE id = 5;
+
+UPDATE cv_templates
+SET
+  summary = 'Mẫu CV cho nhân sự và tuyển dụng',
+  description = 'Phù hợp cho HR, tuyển dụng và các vị trí quản trị nhân sự.'
+WHERE id = 6;
+
+UPDATE cv_templates
+SET
+  summary = 'Mẫu CV cho digital marketing và content',
+  description = 'Tập trung vào chiến dịch, nội dung và hiệu quả tăng trưởng.'
+WHERE id = 7;
+
+UPDATE companies
+SET
+  address = 'Quận 1, TP. Hồ Chí Minh',
+  description = 'Công ty công nghệ tập trung phát triển sản phẩm web và hệ thống tuyển dụng.',
+  logo_url = 'https://res.cloudinary.com/dqukehyry/image/upload/v1775390271/original-ac839f228c8ebe7139e7a9cfcae7d3fa_vgpvbl.png',
+  industry = 'Công nghệ thông tin'
+WHERE recruiter_user_id = (
+  SELECT id FROM users WHERE email = '2251012132tien@ou.edu.vn' LIMIT 1
+);
+
+UPDATE candidate_profiles
+SET
+  address = 'TP. Hồ Chí Minh',
+  headline = 'Lập trình viên web junior',
+  summary = 'Ứng viên có định hướng phát triển full-stack web, yêu thích React và Flask.',
+  expected_salary = '12-15 triệu',
+  desired_location = 'TP. Hồ Chí Minh',
+  education = 'Đại học Mở TP. Hồ Chí Minh',
+  experience = '01 năm thực tập và làm dự án web nội bộ.'
+WHERE id = 1;
+
+UPDATE categories SET name = 'Ngành nghề', description = 'Nhóm lĩnh vực/ngành nghề' WHERE id = 1;
+UPDATE categories SET name = 'Kỹ năng', description = 'Nhóm kỹ năng chuyên môn' WHERE id = 2;
+UPDATE categories SET name = 'Kinh nghiệm', description = 'Nhóm cấp độ kinh nghiệm' WHERE id = 3;
+UPDATE categories SET name = 'Địa điểm', description = 'Nhóm địa điểm làm việc' WHERE id = 4;
+UPDATE categories SET name = 'Hình thức', description = 'Nhóm loại việc làm' WHERE id = 5;
+
+UPDATE tags SET description = 'Kỹ năng React JS' WHERE id = 1;
+UPDATE tags SET description = 'Kỹ năng Flask' WHERE id = 2;
+UPDATE tags SET description = 'Kỹ năng MySQL' WHERE id = 3;
+UPDATE tags SET description = 'Lĩnh vực frontend' WHERE id = 4;
+UPDATE tags SET description = 'Lĩnh vực backend' WHERE id = 5;
+UPDATE tags SET description = 'Cấp độ Junior' WHERE id = 6;
+UPDATE tags SET description = 'Tiếng Anh' WHERE id = 9;
+UPDATE tags SET description = 'Thiết kế trải nghiệm người dùng' WHERE id = 11;
+UPDATE tags SET description = 'Phân tích dữ liệu' WHERE id = 12;
+UPDATE tags SET description = 'Kiểm thử phần mềm' WHERE id = 13;
+UPDATE tags SET description = 'Kinh doanh và bán hàng' WHERE id = 14;
+UPDATE tags SET description = 'Quản lý sản phẩm' WHERE id = 15;
+UPDATE tags SET description = 'Kỹ năng Node.js' WHERE id = 16;
+UPDATE tags SET description = 'Kỹ năng Python' WHERE id = 17;
+UPDATE tags SET description = 'Kỹ năng HTML/CSS' WHERE id = 18;
+UPDATE tags SET description = 'Cấp độ Fresher' WHERE id = 19;
+UPDATE tags SET description = 'Công việc toàn thời gian' WHERE id = 21;
+UPDATE tags SET description = 'Công việc bán thời gian' WHERE id = 22;
+UPDATE tags SET description = 'Kỹ năng JavaScript' WHERE id = 23;
+UPDATE tags SET description = 'Kỹ năng SQL' WHERE id = 24;
+UPDATE tags SET description = 'Kỹ năng Figma' WHERE id = 25;
+UPDATE tags SET description = 'Kỹ năng Power BI' WHERE id = 26;
+UPDATE tags SET description = 'Kỹ năng Excel' WHERE id = 27;
+UPDATE tags SET description = 'Kỹ năng SEO' WHERE id = 28;
+UPDATE tags SET description = 'Kỹ năng Digital Marketing' WHERE id = 29;
+UPDATE tags SET description = 'Kỹ năng giao tiếp' WHERE id = 30;
+UPDATE tags SET description = 'Kỹ năng Docker/DevOps' WHERE id = 31;
+UPDATE tags SET description = 'Công nghệ thông tin' WHERE id = 32;
+UPDATE tags SET description = 'Lĩnh vực marketing' WHERE id = 33;
+UPDATE tags SET description = 'Lĩnh vực tài chính' WHERE id = 34;
+UPDATE tags SET description = 'Lĩnh vực nhân sự' WHERE id = 35;
+UPDATE tags SET description = 'Lĩnh vực vận hành' WHERE id = 36;
+UPDATE tags SET description = 'Lĩnh vực logistics' WHERE id = 37;
+UPDATE tags SET description = 'Thương mại điện tử' WHERE id = 38;
+UPDATE tags SET description = 'Lĩnh vực thiết kế' WHERE id = 39;
+UPDATE tags SET description = 'Cấp độ Middle' WHERE id = 40;
+UPDATE tags SET description = 'Cấp độ Senior' WHERE id = 41;
+UPDATE tags SET description = 'Hợp đồng ngắn hạn' WHERE id = 42;
+UPDATE tags SET description = 'Thực tập sinh' WHERE id = 43;
+
+UPDATE job_postings
+SET
+  summary = 'Phát triển giao diện web cho hệ thống tuyển dụng.',
+  description = 'Tham gia xây dựng frontend React cho nền tảng tuyển dụng hiện đại.',
+  requirements = 'Biết React, JavaScript, HTML/CSS, REST API, tư duy UI tốt.',
+  responsibilities = 'Phát triển trang candidate và recruiter, tối ưu trải nghiệm người dùng.',
+  location = 'TP. Hồ Chí Minh'
+WHERE id = 1;
+
+UPDATE job_postings
+SET
+  summary = 'Xây dựng API và hệ thống admin Flask.',
+  description = 'Xây dựng REST API, xử lý auth, upload file, database MySQL, và dashboard admin.',
+  requirements = 'Flask, SQLAlchemy, MySQL, JWT, bảo mật cơ bản, xử lý file.',
+  responsibilities = 'Phát triển backend, quản lý phân quyền, làm việc với dữ liệu CV và ứng tuyển.',
+  location = 'TP. Hồ Chí Minh'
+WHERE id = 2;
+
+UPDATE job_postings
+SET
+  summary = 'Thiết kế giao diện và trải nghiệm cho hệ thống việc làm.',
+  description = 'Tham gia thiết kế flow người dùng, visual system và UI cho candidate/recruiter.',
+  requirements = 'Figma, wireframe, design system, thẩm mỹ tốt.',
+  responsibilities = 'Phối hợp với frontend và product để hoàn thiện trải nghiệm người dùng.',
+  location = 'TP. Hồ Chí Minh'
+WHERE id = 3;
+
+UPDATE job_postings
+SET
+  summary = 'Xây dựng kiểm thử và ổn định hệ thống portal.',
+  description = 'Phát triển automated test case, regression test và quality checks cho web app.',
+  requirements = 'Testing mindset, SQL cơ bản, validate API.',
+  responsibilities = 'Đảm bảo các bản release hoạt động tốt trên web và mobile.'
+WHERE id = 4;
+
+UPDATE job_postings
+SET
+  summary = 'Xây dựng API cho hệ thống bán hàng đa kênh.',
+  description = 'Phát triển backend cho platform e-commerce, quản lý đơn hàng và thanh toán.',
+  requirements = 'Node.js, SQL, REST API, caching, hệ thống đơn hàng.',
+  responsibilities = 'Tối ưu hiệu năng, đảm bảo luồng checkout và tích hợp third-party.',
+  location = 'TP. Hồ Chí Minh'
+WHERE id = 5;
+
+UPDATE job_postings
+SET
+  summary = 'Tối ưu quảng cáo và tăng trưởng doanh thu.',
+  description = 'Phụ trách quảng cáo digital, tracking, landing page và báo cáo hiệu quả.',
+  requirements = 'Digital Marketing, SEO, communication, Excel, analytics.',
+  responsibilities = 'Theo dõi ROAS, A/B testing và tối ưu chiến dịch quảng cáo.',
+  location = 'TP. Hồ Chí Minh'
+WHERE id = 6;
+
+UPDATE job_postings
+SET
+  summary = 'Phân tích dữ liệu doanh thu và hành vi người dùng.',
+  description = 'Tổng hợp dashboard, phân tích KPI và hỗ trợ business quyết định.',
+  requirements = 'SQL, Excel, Power BI, tư duy phân tích.',
+  responsibilities = 'Xây dựng báo cáo định kỳ và insight cho quản lý.',
+  location = 'TP. Hồ Chí Minh'
+WHERE id = 7;
+
+UPDATE job_postings
+SET
+  summary = 'Xây dựng pipeline và báo cáo BI.',
+  description = 'Phát triển dashboard và mô hình dữ liệu phục vụ báo cáo tài chính.',
+  requirements = 'SQL, Power BI, data modeling, analytics.',
+  responsibilities = 'Tối ưu mô hình dữ liệu và trực quan hóa báo cáo.'
+WHERE id = 8;
+
+UPDATE job_postings
+SET
+  summary = 'Thiết kế sản phẩm số cho nền tảng việc làm.',
+  description = 'Phụ trách user flow, wireframe, UI system và prototype.',
+  requirements = 'Figma, product thinking, UI system, teamwork.',
+  responsibilities = 'Làm việc với frontend, product và recruiter dashboard.',
+  location = 'Hà Nội'
+WHERE id = 9;
+
+UPDATE job_postings
+SET
+  summary = 'Tìm kiếm và sàng lọc ứng viên công nghệ.',
+  description = 'Quản lý nguồn ứng viên, xây dựng quan hệ với candidate và hiring manager.',
+  requirements = 'Communication, HR mindset, sourcing, CRM.',
+  responsibilities = 'Đăng tin, phỏng vấn sơ bộ và theo dõi pipeline tuyển dụng.',
+  location = 'Đà Nẵng'
+WHERE id = 10;
+
+UPDATE job_postings
+SET
+  summary = 'Quản lý chiến dịch digital và nội dung quảng bá.',
+  description = 'Lập kế hoạch marketing, tối ưu nội dung và theo dõi hiệu quả.',
+  requirements = 'Digital Marketing, SEO, communication, content.',
+  responsibilities = 'Chạy chiến dịch, đo lường KPI và phối hợp sales.',
+  location = 'TP. Hồ Chí Minh'
+WHERE id = 11;
+
+UPDATE job_postings
+SET
+  summary = 'Điều phối vận hành và xử lý đơn hàng.',
+  description = 'Phối hợp đội vận hành, theo dõi tiến độ và tối ưu workflow.',
+  requirements = 'Operations, communication, Excel, process thinking.',
+  responsibilities = 'Đảm bảo quy trình vận hành trơn tru và theo dõi KPI.',
+  location = 'Cần Thơ'
+WHERE id = 12;
+
+UPDATE applications
+SET
+  cover_letter = 'Em mong muốn được tham gia phát triển hệ thống tuyển dụng với React.',
+  recruiter_note = 'Hồ sơ phù hợp, chờ phỏng vấn.'
+WHERE id = 1;
+
+UPDATE applications
+SET
+  cover_letter = 'Ứng tuyển vị trí backend Flask để phát triển API hệ thống.'
+WHERE id = 2;
+
+UPDATE companies SET
+  address = 'Quận 3, TP. Hồ Chí Minh',
+  description = 'Doanh nghiệp thương mại điện tử tập trung vào tăng trưởng và công nghệ.'
+WHERE id = 2;
+
+UPDATE companies SET
+  address = 'Quận 7, TP. Hồ Chí Minh',
+  description = 'Công ty phân tích dữ liệu và giải pháp tài chính.'
+WHERE id = 3;
+
+UPDATE companies SET
+  address = 'Hà Nội',
+  description = 'Studio thiết kế sản phẩm số và giao diện cho web/mobile.'
+WHERE id = 4;
+
+UPDATE companies SET
+  address = 'Đà Nẵng',
+  description = 'Đơn vị tuyển dụng và tư vấn nhân sự cho doanh nghiệp công nghệ.'
+WHERE id = 5;
+
+UPDATE companies SET
+  address = 'TP. Hồ Chí Minh',
+  description = 'Đội ngũ bán hàng và tăng trưởng doanh số cho sản phẩm số.'
+WHERE id = 6;
+
+UPDATE companies SET
+  address = 'Cần Thơ',
+  description = 'Doanh nghiệp logistics và vận hành chuỗi cung ứng.'
+WHERE id = 7;
 
 
 

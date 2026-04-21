@@ -1,0 +1,126 @@
+﻿{% extends "admin/base.html" %}
+{% block content %}
+<section class="admin-page">
+  <div class="admin-hero">
+    <div>
+      <span class="eyebrow">Categories</span>
+      <h1>Quản lý category</h1>
+      <p>Dùng để phân nhóm tag cho hệ thống kỹ năng, kinh nghiệm, địa điểm hoặc loại công việc.</p>
+    </div>
+  </div>
+
+  <div class="admin-stats">
+    <article class="stat-card"><span>Total</span><strong>{{ total_categories }}</strong><p>Tổng số category</p></article>
+  </div>
+
+  <div class="admin-duo">
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h2>{{ 'Chỉnh sửa category' if edit_category else 'Tạo category mới' }}</h2>
+          <p>Slug sẽ tự sinh nếu bạn để trống. Nên giữ slug ổn định để tag và API không bị lệch.</p>
+        </div>
+      </div>
+
+      <form method="post" class="admin-form">
+        <input type="hidden" name="action" value="save">
+        <input type="hidden" name="category_id" value="{{ edit_category.id if edit_category else '' }}">
+        <div class="form-grid">
+          <label class="field"><span>Name</span><input name="name" value="{{ edit_category.name if edit_category else '' }}" required></label>
+          <label class="field"><span>Slug</span><input name="slug" value="{{ edit_category.slug if edit_category else '' }}"></label>
+          <label class="field full"><span>Description</span><textarea name="description" rows="5">{{ edit_category.description if edit_category and edit_category.description else '' }}</textarea></label>
+          <label class="field full checkbox-row">
+            <input type="checkbox" name="is_active" {% if edit_category and edit_category.is_active %}checked{% elif not edit_category %}checked{% endif %}>
+            <span>Active</span>
+          </label>
+        </div>
+        <div class="admin-actions">
+          <button class="btn" type="submit">{{ 'Cập nhật' if edit_category else 'Tạo category' }}</button>
+          {% if edit_category %}<a class="btn-outline" href="{{ url_for('admin.categories') }}">Hủy chỉnh sửa</a>{% endif %}
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h2>Danh sách category</h2>
+          <p>Category đang dùng để phân loại tag trong job, resume và bộ lọc hệ thống.</p>
+        </div>
+      </div>
+      <div class="table-wrap users-table-wrap">
+        <table class="table users-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Slug</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for category in categories %}
+              <tr>
+                <td>
+                  <strong>{{ category.name }}</strong><br>
+                  <small>{{ category.description or 'Chưa có mô tả' }}</small>
+                </td>
+                <td>{{ category.slug }}</td>
+                <td>
+                  {% if category.is_active %}
+                    <span class="admin-pill admin-pill--green">active</span>
+                  {% else %}
+                    <span class="admin-pill admin-pill--slate">inactive</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="row-actions row-actions--tight">
+                    <a class="btn-small btn-outline action-btn" href="{{ url_for('admin.categories', edit=category.id) }}">
+                      <span class="action-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M4 20h4l10-10-4-4L4 16v4Z"></path>
+                          <path d="m13 7 4 4"></path>
+                        </svg>
+                      </span>
+                      <span>Sửa</span>
+                    </a>
+                    <form method="post">
+                      <input type="hidden" name="action" value="toggle">
+                      <input type="hidden" name="category_id" value="{{ category.id }}">
+                      <button class="btn-small btn-outline action-btn" type="submit">
+                        <span class="action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 5c5 0 9 7 9 7s-4 7-9 7-9-7-9-7 4-7 9-7Z"></path>
+                            <circle cx="12" cy="12" r="2.5"></circle>
+                          </svg>
+                        </span>
+                        <span>{{ 'Ẩn' if category.is_active else 'Hiện' }}</span>
+                      </button>
+                    </form>
+                    <form method="post" onsubmit="return confirm('Xóa category này?');">
+                      <input type="hidden" name="action" value="delete">
+                      <input type="hidden" name="category_id" value="{{ category.id }}">
+                      <button class="btn-small btn-danger action-btn" type="submit">
+                        <span class="action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4h8v2"></path>
+                            <path d="M6 6l1 14h10l1-14"></path>
+                          </svg>
+                        </span>
+                        <span>Xóa</span>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4"><div class="empty-state">Chưa có category nào.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</section>
+{% endblock %}

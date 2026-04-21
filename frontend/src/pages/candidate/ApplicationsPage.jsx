@@ -1,7 +1,8 @@
-﻿import { Link } from "react-router-dom";
+﻿import { Link, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../api";
 import { ROUTES } from "../../routes";
+import { Skeleton, SkeletonText } from "../../components/Skeleton";
 
 const STATUS_META = {
   submitted: {
@@ -44,12 +45,21 @@ const TIMELINE = [
 ];
 
 export default function CandidateApplicationsPage() {
+  const location = useLocation();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [applications, setApplications] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const preferredApplicationId = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const raw = params.get("applicationId");
+    const parsed = Number(raw);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }, [location.search]);
 
   useEffect(() => {
     let mounted = true;
@@ -58,12 +68,17 @@ export default function CandidateApplicationsPage() {
       setLoading(true);
       setError("");
       try {
-        const data = await api.applications.myApplications();
+        const [data, notices] = await Promise.all([
+          api.applications.myApplications(),
+          api.notifications.myNotifications(6).catch(() => []),
+        ]);
         if (!mounted) return;
         setApplications(Array.isArray(data) ? data : []);
+        setNotifications(Array.isArray(notices) ? notices : []);
       } catch (err) {
         if (mounted) {
           setApplications([]);
+          setNotifications([]);
           setError(err.message || "Không thể tải dữ liệu ứng tuyển.");
         }
       } finally {
@@ -101,11 +116,21 @@ export default function CandidateApplicationsPage() {
       return;
     }
 
+    if (preferredApplicationId) {
+      const preferredExists = filteredApplications.some((application) => application.id === preferredApplicationId);
+      if (preferredExists) {
+        if (selectedId !== preferredApplicationId) {
+          setSelectedId(preferredApplicationId);
+        }
+        return;
+      }
+    }
+
     const exists = filteredApplications.some((application) => application.id === selectedId);
     if (!exists) {
       setSelectedId(filteredApplications[0].id);
     }
-  }, [filteredApplications, selectedId]);
+  }, [filteredApplications, selectedId, preferredApplicationId]);
 
   const selectedApplication = useMemo(() => {
     if (!filteredApplications.length) return null;
@@ -188,6 +213,36 @@ export default function CandidateApplicationsPage() {
 
       {error ? <div className="auth-alert auth-alert--error">{error}</div> : null}
 
+      {notifications.length ? (
+        <article className="dashboard-card candidate-detail-block">
+          <div className="candidate-detail-block-head">
+            <h4>Thông báo mới</h4>
+            <span className="candidate-detail-hint">Cập nhật nhà tuyển dụng đã gửi trên web</span>
+          </div>
+          <div className="candidate-application-list">
+            {notifications.map((notification) => (
+              <div key={notification.id} className="candidate-application-card" style={{ cursor: "default" }}>
+                <div className="candidate-application-card-head">
+                  <div className="candidate-application-title-block">
+                    <div className="candidate-application-title-row">
+                      <div>
+                        <h3>{notification.title}</h3>
+                        <p>{notification.message}</p>
+                      </div>
+                      <StatusBadge status={mapNotificationStatus(notification.type)} />
+                    </div>
+                    <div className="candidate-application-meta">
+                      <span>{formatDate(notification.created_at)}</span>
+                      <span>{notification.is_read ? "Đã đọc" : "Chưa đọc"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+      ) : null}
+
       <div className="candidate-applications-layout">
         <article className="dashboard-card candidate-application-list-panel">
           <div className="dashboard-card-head">
@@ -196,7 +251,40 @@ export default function CandidateApplicationsPage() {
           </div>
 
           {loading ? (
-            <div className="candidate-empty-state candidate-empty-state--large">Đang tải hồ sơ ứng tuyển từ database...</div>
+            <div className="candidate-application-list">
+              {Array.from({ length: 3 }, (_, index) => (
+                <div key={index} className="candidate-application-card skeleton-card" aria-hidden="true">
+                  <div className="candidate-application-card-head">
+                    <div className="candidate-company-mark">
+                      <Skeleton circle width="40px" height="40px" />
+                    </div>
+                    <div className="candidate-application-title-block">
+                      <div className="candidate-application-title-row">
+                        <div className="skeleton-text-group">
+                          <Skeleton className="skeleton-line" width="220px" height="20px" />
+                          <Skeleton className="skeleton-line skeleton-line--short" width="150px" height="14px" />
+                        </div>
+                        <Skeleton className="skeleton-pill" width="90px" height="24px" />
+                      </div>
+                      <div className="candidate-application-meta">
+                        <Skeleton className="skeleton-line" width="120px" height="12px" />
+                        <Skeleton className="skeleton-line" width="80px" height="12px" />
+                        <Skeleton className="skeleton-line" width="100px" height="12px" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="candidate-application-card-body">
+                    <div className="candidate-application-chip-row">
+                      <Skeleton className="skeleton-pill" width="86px" height="24px" />
+                      <Skeleton className="skeleton-pill" width="96px" height="24px" />
+                      <Skeleton className="skeleton-pill" width="132px" height="24px" />
+                    </div>
+                    <SkeletonText lines={2} />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : filteredApplications.length ? (
             <div className="candidate-application-list">
               {filteredApplications.map((application) => (
@@ -346,8 +434,8 @@ export default function CandidateApplicationsPage() {
 
               <section className="candidate-detail-block">
                 <div className="candidate-detail-block-head">
-                  <h4>Ghi chú từ recruiter</h4>
-                  <span className="candidate-detail-hint">Phần `recruiter_note` trong bảng `applications`</span>
+                  <h4>Ghi chú từ nhà tuyển dụng</h4>
+                  <span className="candidate-detail-hint">Phản hồi nhà tuyển dụng gửi cho hồ sơ của bạn</span>
                 </div>
                 {selectedApplication.recruiter_note ? (
                   <div className="candidate-note">{selectedApplication.recruiter_note}</div>
@@ -418,6 +506,13 @@ function getStatusMeta(status) {
   return STATUS_META[status] || STATUS_META.submitted;
 }
 
+function mapNotificationStatus(type) {
+  if (type === "interview") return "interview";
+  if (type === "rejected") return "rejected";
+  if (type === "reviewing") return "reviewing";
+  return "submitted";
+}
+
 function labelEmployment(value) {
   const map = {
     "full-time": "Toàn thời gian",
@@ -476,4 +571,12 @@ function getInitials(value) {
     .map((part) => part.charAt(0))
     .join("")
     .toUpperCase();
+}
+
+function normalize(value) {
+  return stripDiacritics(String(value || "").toLowerCase().trim());
+}
+
+function stripDiacritics(value) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }

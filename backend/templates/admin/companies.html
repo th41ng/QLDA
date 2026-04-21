@@ -1,0 +1,121 @@
+﻿{% extends "admin/base.html" %}
+{% block content %}
+<section class="admin-page">
+  <div class="admin-hero">
+    <div>
+      <span class="eyebrow">Companies</span>
+      <h1>Quản lý công ty</h1>
+      <p>Gắn công ty với recruiter, cập nhật hồ sơ doanh nghiệp và đảm bảo job post luôn có nguồn company hợp lệ.</p>
+    </div>
+    <div class="admin-hero-actions">
+      <a class="btn" href="{{ url_for('admin.companies') }}">Tạo company mới</a>
+    </div>
+  </div>
+
+  <div class="admin-stats">
+    <article class="stat-card"><span>Total</span><strong>{{ total_companies }}</strong><p>Tổng số công ty</p></article>
+  </div>
+
+  <div class="admin-duo">
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h2>{{ 'Chỉnh sửa company' if edit_company else 'Tạo company mới' }}</h2>
+          <p>Mỗi recruiter chỉ nên có 1 company. Khi đổi recruiter, hệ thống sẽ kiểm tra trùng dữ liệu.</p>
+        </div>
+      </div>
+
+      <form method="post" class="admin-form">
+        <input type="hidden" name="action" value="save">
+        <input type="hidden" name="company_id" value="{{ edit_company.id if edit_company else '' }}">
+        <div class="form-grid">
+          <label class="field full"><span>Recruiter</span>
+            <select name="recruiter_user_id" required>
+              <option value="">Chọn recruiter</option>
+              {% for recruiter in recruiters %}
+                <option value="{{ recruiter.id }}" {% if edit_company and edit_company.recruiter_user_id == recruiter.id %}selected{% endif %}>{{ recruiter.full_name }} ({{ recruiter.email }})</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field"><span>Company name</span><input name="company_name" value="{{ edit_company.company_name if edit_company else '' }}" required></label>
+          <label class="field"><span>Tax code</span><input name="tax_code" value="{{ edit_company.tax_code if edit_company and edit_company.tax_code else '' }}"></label>
+          <label class="field"><span>Website</span><input name="website" value="{{ edit_company.website if edit_company and edit_company.website else '' }}"></label>
+          <label class="field"><span>Industry</span><input name="industry" value="{{ edit_company.industry if edit_company and edit_company.industry else '' }}"></label>
+          <label class="field"><span>Logo URL</span><input name="logo_url" value="{{ edit_company.logo_url if edit_company and edit_company.logo_url else '' }}"></label>
+          <label class="field full"><span>Address</span><input name="address" value="{{ edit_company.address if edit_company and edit_company.address else '' }}"></label>
+          <label class="field full"><span>Description</span><textarea name="description" rows="5">{{ edit_company.description if edit_company and edit_company.description else '' }}</textarea></label>
+        </div>
+        <div class="admin-actions">
+          <button class="btn" type="submit">{{ 'Cập nhật' if edit_company else 'Tạo company' }}</button>
+          {% if edit_company %}<a class="btn-outline" href="{{ url_for('admin.companies') }}">Hủy chỉnh sửa</a>{% endif %}
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h2>Danh sách company</h2>
+          <p>Thông tin công ty được dùng trực tiếp cho job postings và trang recruiter.</p>
+        </div>
+      </div>
+      <div class="table-wrap users-table-wrap">
+        <table class="table users-table">
+          <thead>
+            <tr>
+              <th>Công ty</th>
+              <th>Recruiter</th>
+              <th>Thông tin</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for company in companies %}
+              <tr>
+                <td>
+                  <strong>{{ company.company_name }}</strong><br>
+                  <small>{{ company.industry or 'Chưa có ngành' }}</small>
+                </td>
+                <td>{{ company.recruiter.full_name if company.recruiter else 'Chưa gắn' }}</td>
+                <td>
+                  <div class="subtle">Tax: {{ company.tax_code or 'Chưa có' }}</div>
+                  <div class="subtle">{{ company.address or 'Chưa có địa chỉ' }}</div>
+                </td>
+                <td>
+                  <div class="row-actions row-actions--tight">
+                    <a class="btn-small btn-outline action-btn" href="{{ url_for('admin.companies', edit=company.id) }}">
+                      <span class="action-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M4 20h4l10-10-4-4L4 16v4Z"></path>
+                          <path d="m13 7 4 4"></path>
+                        </svg>
+                      </span>
+                      <span>Sửa</span>
+                    </a>
+                    <form method="post" onsubmit="return confirm('Xóa company này?');">
+                      <input type="hidden" name="action" value="delete">
+                      <input type="hidden" name="company_id" value="{{ company.id }}">
+                      <button class="btn-small btn-danger action-btn" type="submit">
+                        <span class="action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4h8v2"></path>
+                            <path d="M6 6l1 14h10l1-14"></path>
+                          </svg>
+                        </span>
+                        <span>Xóa</span>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4"><div class="empty-state">Chưa có company nào.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</section>
+{% endblock %}

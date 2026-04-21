@@ -45,7 +45,7 @@ export default function LandingJobCard({ job }) {
           <Link className="btn btn-ghost btn-small" to={ROUTES.jobDetail(job.id)}>
             Xem chi tiết
           </Link>
-          <Link className="btn btn-small" to={ROUTES.auth}>
+          <Link className="btn btn-small" to={ROUTES.jobDetail(job.id)}>
             Ứng tuyển ngay
           </Link>
         </div>

@@ -27,18 +27,49 @@ def _company_to_dict(company: Company, openings: int = 0):
 
 @api_companies_bp.get("/featured")
 def featured_companies():
-    rows = (
+    q = (request.args.get("q") or "").strip()
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except (TypeError, ValueError):
+        page = 1
+    try:
+        per_page = min(100, max(1, int(request.args.get("per_page", 6))))
+    except (TypeError, ValueError):
+        per_page = 6
+
+    base_query = (
         db.session.query(Company, func.count(JobPosting.id).label("openings"))
         .outerjoin(
             JobPosting,
             (JobPosting.company_id == Company.id) & (JobPosting.status == "published"),
         )
         .group_by(Company.id)
+    )
+
+    if q:
+        like = f"%{q}%"
+        base_query = base_query.filter(
+            Company.company_name.ilike(like)
+            | Company.industry.ilike(like)
+            | Company.address.ilike(like)
+            | Company.description.ilike(like)
+        )
+
+    total = base_query.count()
+    rows = (
+        base_query
         .order_by(func.count(JobPosting.id).desc(), Company.company_name.asc())
-        .limit(12)
+        .offset((page - 1) * per_page)
+        .limit(per_page)
         .all()
     )
-    return json_ok([_company_to_dict(company, openings) for company, openings in rows])
+    return json_ok({
+        "companies": [_company_to_dict(company, openings) for company, openings in rows],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "has_more": (page * per_page) < total,
+    })
 
 
 @api_companies_bp.get("/me")

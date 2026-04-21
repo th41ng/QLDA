@@ -1,0 +1,281 @@
+{% extends "admin/base.html" %}
+{% block content %}
+{% set profile = selected_resume.user.candidate_profile if selected_resume and selected_resume.user else None %}
+{% set close_url = url_for('admin.resumes', page=pagination.page, q=q, source_type=source_type, primary=primary_filter, role=role_filter) %}
+<section class="admin-page resume-page">
+  <div class="admin-hero">
+    <div>
+      <span class="eyebrow">Resumes</span>
+      <h1>Qu&#x1EA3;n l&#xFD; h&#x1ED3; s&#x1A1; CV</h1>
+      <p>Admin xem to&#x00E0;n b&#x1ED9; h&#x1ED3; s&#x1A1; CV theo &#x1EE9;ng vi&#x00EA;n, l&#x1ECD;c theo ngu&#x1ED3;n d&#x1EEF; li&#x1EC7;u, xem chi ti&#x1EBF;t h&#x1ED3; s&#x1A1; v&#xE0; qu&#x1EA3;n l&#xFD; CV ch&#xED;nh ho&#x1EB7;c x&#xF3;a khi c&#x1EA7;n.</p>
+    </div>
+    <div class="admin-hero-actions">
+      <a class="btn-outline" href="{{ url_for('admin.resumes') }}">L&#xE0;m m&#x1EDB;i</a>
+      {% if selected_resume %}
+        <a class="btn" href="#resume-modal">Xem chi ti&#x1EBF;t</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="admin-stats">
+    <article class="stat-card"><span>Total</span><strong>{{ total_resumes }}</strong><p>T&#x1ED5;ng s&#x1ED1; CV</p></article>
+    <article class="stat-card"><span>Primary</span><strong>{{ primary_resumes }}</strong><p>CV ch&#xED;nh</p></article>
+    <article class="stat-card"><span>Manual</span><strong>{{ manual_resumes }}</strong><p>CV t&#x1EA1;o tay</p></article>
+    <article class="stat-card"><span>Upload</span><strong>{{ upload_resumes }}</strong><p>CV upload</p></article>
+    <article class="stat-card"><span>Candidates</span><strong>{{ candidate_resumes }}</strong><p>&#x1EE8;ng vi&#x00EA;n c&#xF3; CV</p></article>
+  </div>
+
+  <section class="admin-card">
+    <div class="admin-card-head admin-card-head--stacked">
+      <div>
+        <h2>Danh s&#xE1;ch CV</h2>
+        <p>Hi&#x1EC3;n th&#x1ECB; theo &#x1EE9;ng vi&#x00EA;n, CV ch&#xED;nh lu&#xF4;n &#x111;&#x1B0;&#x1EE3;c &#x1B0;u ti&#xEA;n l&#xEA;n &#x111;&#x1EA7;u danh s&#xE1;ch.</p>
+      </div>
+      <span class="admin-pill admin-pill--slate">{{ pagination.total }} records</span>
+    </div>
+
+    <div class="admin-toolbar resume-toolbar">
+      <form method="get" class="resume-filter-bar">
+        <label class="field">
+          <span>T&#x1EEB; kh&#xF3;a</span>
+          <input name="q" value="{{ q }}" placeholder="T&#xEA;n CV, &#x1EE9;ng vi&#x00EA;n, email, template...">
+        </label>
+        <label class="field">
+          <span>Ngu&#x1ED3;n CV</span>
+          <select name="source_type">
+            <option value="">T&#x1EA5;t c&#x1EA3;</option>
+            {% for option in resume_source_options %}
+              <option value="{{ option }}" {% if source_type == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field">
+          <span>CV ch&#xED;nh</span>
+          <select name="primary">
+            <option value="">T&#x1EA5;t c&#x1EA3;</option>
+            <option value="primary" {% if primary_filter == 'primary' %}selected{% endif %}>CV ch&#xED;nh</option>
+            <option value="secondary" {% if primary_filter == 'secondary' %}selected{% endif %}>CV ph&#x1EE5;</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Role &#x1EE9;ng vi&#x00EA;n</span>
+          <select name="role">
+            <option value="">T&#x1EA5;t c&#x1EA3;</option>
+            {% for role in role_options %}
+              <option value="{{ role }}" {% if role_filter == role %}selected{% endif %}>{{ role }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <div class="admin-actions resume-toolbar-actions">
+          <button class="btn" type="submit">&#x1EA2;p d&#x1EE5;ng</button>
+          <a class="btn-outline" href="{{ url_for('admin.resumes') }}">X&#xF3;a l&#x1ECD;c</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="table-wrap users-table-wrap">
+      <table class="table users-table">
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>&#x1EE8;ng vi&#x00EA;n</th>
+            <th>CV</th>
+            <th>Ngu&#x1ED3;n</th>
+            <th>Tr&#x1EA1;ng th&#xE1;i</th>
+            <th>C&#x1EAD;p nh&#x1EAD;t</th>
+            <th>H&#xE0;nh &#x111;&#x1ED9;ng</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for resume in resumes %}
+            <tr>
+              <td>{{ ((pagination.page - 1) * pagination.per_page) + loop.index }}</td>
+              <td>
+                <div class="user-cell">
+                  <div class="user-avatar">
+                    {% if resume.user and resume.user.avatar_url %}
+                      <img src="{{ resume.user.avatar_url }}" alt="{{ resume.user.full_name }}">
+                    {% else %}
+                      <span>{{ resume.user.full_name[:1] if resume.user and resume.user.full_name else 'U' }}</span>
+                    {% endif %}
+                  </div>
+                  <div>
+                    <strong>{{ resume.user.full_name if resume.user else 'N/A' }}</strong><br>
+                    <small>{{ resume.user.email if resume.user else '' }}</small>
+                    <div class="subtle">{{ resume.user.role if resume.user else '' }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <strong>{{ resume.title }}</strong><br>
+                <small>{{ resume.template_name or 'Ch&#x1B0;a c&#xF3; template' }}</small>
+                <div class="kpi-line">
+                  {% for tag in resume.tags[:2] %}
+                    <span>{{ tag.name }}</span>
+                  {% endfor %}
+                </div>
+              </td>
+              <td>
+                <div class="subtle">{{ resume.source_type }}</div>
+                <div class="subtle">{{ resume.original_filename or 'Manual resume' }}</div>
+                <div class="subtle">{{ resume.file_ext or '' }}</div>
+              </td>
+              <td>
+                {% if resume.is_primary %}
+                  <span class="admin-pill admin-pill--green">primary</span>
+                {% else %}
+                  <span class="admin-pill admin-pill--slate">secondary</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="subtle">{{ resume.updated_at.strftime('%d/%m/%Y %H:%M') if resume.updated_at else '' }}</div>
+                <div class="subtle">{{ resume.applications|length }} applications</div>
+              </td>
+              <td>
+                <div class="row-actions row-actions--tight">
+                  <a class="btn-small btn-outline action-btn" href="{{ url_for('admin.resumes', page=pagination.page, view=resume.id, q=q, source_type=source_type, primary=primary_filter, role=role_filter) }}">
+                    <span class="action-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </span>
+                    <span>Xem</span>
+                  </a>
+                  {% if not resume.is_primary %}
+                    <form method="post">
+                      <input type="hidden" name="action" value="primary">
+                      <input type="hidden" name="resume_id" value="{{ resume.id }}">
+                      <button class="btn-small btn-outline action-btn" type="submit">
+                        <span class="action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m5 21 2-7-4-3 5-.5L10 4l2 6.5L17 11l-4 3 2 7-5-4-5 4Z"></path>
+                          </svg>
+                        </span>
+                        <span>??t ch?nh</span>
+                      </button>
+                    </form>
+                  {% endif %}
+                  <form method="post" onsubmit="return confirm('X&#xF3;a h&#x1ED3; s&#x1A1; CV n&#xE0;y?');">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="resume_id" value="{{ resume.id }}">
+                    <button class="btn-small btn-danger action-btn" type="submit">
+                      <span class="action-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M3 6h18"></path>
+                          <path d="M8 6V4h8v2"></path>
+                          <path d="M6 6l1 14h10l1-14"></path>
+                        </svg>
+                      </span>
+                      <span>X&#xF3;a</span>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7"><div class="empty-state">Ch&#x1B0;a c&#xF3; h&#x1ED3; s&#x1A1; CV n&#xE0;o.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+      <div class="pagination">
+        {% if pagination.has_prev %}
+          <a class="btn-outline btn-small" href="{{ url_for('admin.resumes', page=pagination.prev_num, q=q, source_type=source_type, primary=primary_filter, role=role_filter) }}">Trang tr&#x1B0;&#x1EDB;c</a>
+        {% endif %}
+        <div class="pagination-numbers">
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if p %}
+              {% if p == pagination.page %}
+                <span class="pagination-current">{{ p }}</span>
+              {% else %}
+                <a class="pagination-link" href="{{ url_for('admin.resumes', page=p, q=q, source_type=source_type, primary=primary_filter, role=role_filter) }}">{{ p }}</a>
+              {% endif %}
+            {% else %}
+              <span class="pagination-ellipsis">&hellip;</span>
+            {% endif %}
+          {% endfor %}
+        </div>
+        {% if pagination.has_next %}
+          <a class="btn-outline btn-small" href="{{ url_for('admin.resumes', page=pagination.next_num, q=q, source_type=source_type, primary=primary_filter, role=role_filter) }}">Trang sau</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
+  {% if selected_resume %}
+    <div class="modal is-open" id="resume-modal" aria-hidden="false">
+      <a class="modal-overlay" href="{{ close_url }}" aria-label="&#x110;&#xF3;ng chi ti&#x1EBF;t CV"></a>
+      <div class="modal-panel modal-panel--wide" role="dialog" aria-modal="true" aria-labelledby="resume-modal-title">
+        <div class="modal-head">
+          <div>
+            <span class="eyebrow eyebrow--compact">Resume detail</span>
+            <h2 id="resume-modal-title">Chi ti&#x1EBF;t h&#x1ED3; s&#x1A1; CV</h2>
+            <p>Xem nhanh d&#x1EEF; li&#x1EC7;u h&#x1ED3; s&#x1A1; n&#x1EC1;n, file CV v&#xE0; n&#x1ED9;i dung JSON &#x111;&#x1EC3; &#x111;&#x1ED3;ng b&#x1ED9; t&#x1EEB; backend.</p>
+          </div>
+          <a class="modal-close" href="{{ close_url }}">&times;</a>
+        </div>
+
+        <div class="resume-detail-hero">
+          <div class="resume-detail-top">
+            <span class="eyebrow eyebrow--compact">Selected resume</span>
+            <h3 style="margin:0;">{{ selected_resume.title }}</h3>
+            <div class="resume-detail-meta">
+              <span class="admin-pill admin-pill--blue">{{ selected_resume.source_type }}</span>
+              <span class="admin-pill {{ 'admin-pill--green' if selected_resume.is_primary else 'admin-pill--slate' }}">{{ 'primary' if selected_resume.is_primary else 'secondary' }}</span>
+              <span class="admin-pill admin-pill--slate">{{ selected_resume.user.role if selected_resume.user else 'unknown' }}</span>
+            </div>
+          </div>
+          <div class="resume-detail-meta">
+            <span class="admin-pill admin-pill--slate">{{ selected_resume.applications|length }} applications</span>
+            <span class="admin-pill admin-pill--slate">{{ selected_resume.match_scores|length }} match scores</span>
+            <span class="admin-pill admin-pill--slate">{{ selected_resume.tags|length }} tags</span>
+          </div>
+        </div>
+
+        <div class="resume-summary-grid">
+          <div class="resume-summary-item"><span>&#x1EE8;ng vi&#x00EA;n</span><strong>{{ selected_resume.user.full_name if selected_resume.user else 'N/A' }}</strong></div>
+          <div class="resume-summary-item"><span>Email</span><strong>{{ selected_resume.user.email if selected_resume.user else 'N/A' }}</strong></div>
+          <div class="resume-summary-item"><span>Template</span><strong>{{ selected_resume.template_name or 'Ch&#x1B0;a c&#xF3;' }}</strong></div>
+          <div class="resume-summary-item"><span>File g&#x1ED1;c</span><strong>{{ selected_resume.original_filename or 'Kh&#xF4;ng c&#xF3;' }}</strong></div>
+          <div class="resume-summary-item"><span>&#x110;&#x1ECB;nh d&#x1EA1;ng</span><strong>{{ selected_resume.file_ext or 'N/A' }} - {{ selected_resume.mime_type or 'N/A' }}</strong></div>
+          <div class="resume-summary-item"><span>Ng&#xE0;y t&#x1EA1;o / c&#x1EAD;p nh&#x1EAD;t</span><strong>{{ selected_resume.created_at.strftime('%d/%m/%Y %H:%M') if selected_resume.created_at else 'N/A' }} / {{ selected_resume.updated_at.strftime('%d/%m/%Y %H:%M') if selected_resume.updated_at else 'N/A' }}</strong></div>
+        </div>
+
+        <div class="resume-summary-grid">
+          <div class="resume-summary-item"><span>Ng&#xE0;y sinh</span><strong>{{ profile.dob.strftime('%d/%m/%Y') if profile and profile.dob else 'Ch&#x1B0;a c&#xF3;' }}</strong></div>
+          <div class="resume-summary-item"><span>Gi&#x1EDB;i t&#xED;nh</span><strong>{{ profile.gender if profile and profile.gender else 'Ch&#x1B0;a c&#xF3;' }}</strong></div>
+          <div class="resume-summary-item"><span>&#x110;&#x1ECB;a ch&#x1EC9;</span><strong>{{ profile.address if profile and profile.address else 'Ch&#x1B0;a c&#xF3;' }}</strong></div>
+          <div class="resume-summary-item"><span>Ch&#x1EE9;c danh hi&#x1EC7;n t&#x1EA1;i</span><strong>{{ profile.current_title if profile and profile.current_title else 'Ch&#x1B0;a c&#xF3;' }}</strong></div>
+          <div class="resume-summary-item"><span>Kinh nghi&#x1EC7;m</span><strong>{{ profile.years_experience if profile else 0 }} n&#x103;m</strong></div>
+          <div class="resume-summary-item"><span>L&#x1B0;&#x1A1;ng mong mu&#x1ED1;n</span><strong>{{ profile.expected_salary if profile and profile.expected_salary else 'Ch&#x1B0;a c&#xF3;' }}</strong></div>
+          <div class="resume-summary-item"><span>&#x110;&#x1ECB;a &#x111;i&#x1EC3;m mong mu&#x1ED1;n</span><strong>{{ profile.desired_location if profile and profile.desired_location else 'Ch&#x1B0;a c&#xF3;' }}</strong></div>
+        </div>
+
+        <div class="resume-block">
+          <h3>Tags CV</h3>
+          <div class="resume-detail-meta">
+            {% for tag in selected_resume.tags %}
+              <span class="admin-pill admin-pill--slate">{{ tag.name }}</span>
+            {% else %}
+              <span class="admin-pill admin-pill--slate">Ch&#x1B0;a g&#x1EAF;n tag</span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="resume-block">
+          <h3>Structured JSON</h3>
+          <pre class="resume-code">{{ selected_json if selected_json else '{}' }}</pre>
+        </div>
+
+        <div class="resume-block">
+          <h3>Raw text</h3>
+          <div class="resume-text">{{ selected_resume.raw_text or 'Ch&#x1B0;a c&#xF3; d&#x1EEF; li&#x1EC7;u text t&#x1EEB; file ho&#x1EB7;c CV t&#x1EA1;o tay.' }}</div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

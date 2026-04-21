@@ -109,7 +109,13 @@ export const api = {
   },
   companies: {
     me: () => apiRequest("/companies/me"),
-    featured: () => apiRequest("/companies/featured", { auth: false }),
+    featured: ({ q = "", page = 1, perPage = 6 } = {}) => {
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      params.set("page", String(page));
+      params.set("per_page", String(perPage));
+      return apiRequest(`/companies/featured?${params.toString()}`, { auth: false });
+    },
     updateMe: (payload) =>
       apiRequest("/companies/me", {
         method: "PUT",
@@ -122,13 +128,83 @@ export const api = {
         method: "POST",
         body: JSON.stringify(payload),
       }),
+    checkForJob: (jobId) => apiRequest(`/applications/check?job_id=${jobId}`),
     myApplications: () => apiRequest("/applications/mine"),
     recruiterApplications: () => apiRequest("/applications/recruiter"),
     recruiterApplicationResume: (applicationId) => apiRequest(`/applications/${applicationId}/resume`),
-    updateStatus: (id, status) =>
+    recruiterResumePdfUrl: (applicationId) =>
+      `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001/api"}/applications/${applicationId}/resume/pdf`,
+    updateStatus: (id, payload) =>
       apiRequest(`/applications/${id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(typeof payload === "string" ? { status: payload } : payload),
       }),
+  },
+  notifications: {
+    myNotifications: (limit = 10) => apiRequest(`/notifications/mine?limit=${limit}`),
+    markRead: (id) =>
+      apiRequest(`/notifications/${id}/read`, {
+        method: "PATCH",
+      }),
+  },
+  admin: {
+    login: (email, password) =>
+      apiRequest("/admin/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+        auth: false,
+      }),
+    getAll: () => apiRequest("/admin"),
+    getById: (id) => apiRequest(`/admin/${id}`),
+    create: (payload) =>
+      apiRequest("/admin", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    update: (id, payload) =>
+      apiRequest(`/admin/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    delete: (id) =>
+      apiRequest(`/admin/${id}`, {
+        method: "DELETE",
+      }),
+    search: (query) =>
+      apiRequest(`/admin/search/${query}`),
+    changePassword: (id, payload) =>
+      apiRequest(`/admin/${id}/change-password`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+  },
+  users: {
+    getAll: (role, status, search) => {
+      let url = "/users";
+      const params = new URLSearchParams();
+      if (role) params.append("role", role);
+      if (status) params.append("status", status);
+      if (search) params.append("search", search);
+      if (params.toString()) url += `?${params.toString()}`;
+      return apiRequest(url);
+    },
+    getById: (id) => apiRequest(`/users/${id}`),
+    create: (payload) =>
+      apiRequest("/users", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    update: (id, payload) =>
+      apiRequest(`/users/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    delete: (id) =>
+      apiRequest(`/users/${id}`, {
+        method: "DELETE",
+      }),
+    search: (query) =>
+      apiRequest(`/users/search/${query}`),
+    stats: () => apiRequest("/users/stats/overview"),
   },
 };

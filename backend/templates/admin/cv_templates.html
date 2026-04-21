@@ -1,0 +1,136 @@
+﻿{% extends "admin/base.html" %}
+{% block content %}
+<section class="admin-page">
+  <div class="admin-hero">
+    <div>
+      <span class="eyebrow">CV Templates</span>
+      <h1>Quản lý template CV</h1>
+      <p>Thư viện template CV dùng cho màn candidate. Admin có thể tạo, sửa, ẩn/hiện và xóa template ngay trong backend.</p>
+    </div>
+  </div>
+
+  <div class="admin-stats">
+    <article class="stat-card"><span>Total</span><strong>{{ total_templates }}</strong><p>Tổng template CV</p></article>
+  </div>
+
+  <div class="admin-duo">
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h2>{{ 'Chỉnh sửa template' if edit_template else 'Tạo template mới' }}</h2>
+          <p>Chỉ nên cập nhật các field đúng với bảng `cv_templates` để frontend candidate không bị lệch dữ liệu.</p>
+        </div>
+      </div>
+
+      <form method="post" class="admin-form">
+        <input type="hidden" name="action" value="save">
+        <input type="hidden" name="template_id" value="{{ edit_template.id if edit_template else '' }}">
+        <div class="form-grid">
+          <label class="field"><span>Name</span><input name="name" value="{{ edit_template.name if edit_template else '' }}" required></label>
+          <label class="field"><span>Slug</span><input name="slug" value="{{ edit_template.slug if edit_template else '' }}"></label>
+          <label class="field"><span>File format</span>
+            <select name="file_format">
+              {% for option in file_format_options %}
+                <option value="{{ option }}" {% if edit_template and edit_template.file_format == option %}selected{% elif not edit_template and option == 'both' %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field"><span>Thumbnail URL</span><input name="thumbnail_url" value="{{ edit_template.thumbnail_url if edit_template and edit_template.thumbnail_url else '' }}"></label>
+          <label class="field"><span>Preview URL</span><input name="preview_url" value="{{ edit_template.preview_url if edit_template and edit_template.preview_url else '' }}"></label>
+          <label class="field full"><span>Summary</span><input name="summary" value="{{ edit_template.summary if edit_template and edit_template.summary else '' }}"></label>
+          <label class="field full"><span>Description</span><textarea name="description" rows="5">{{ edit_template.description if edit_template and edit_template.description else '' }}</textarea></label>
+          <label class="field full checkbox-row">
+            <input type="checkbox" name="is_active" {% if edit_template and edit_template.is_active %}checked{% elif not edit_template %}checked{% endif %}>
+            <span>Active</span>
+          </label>
+        </div>
+        <div class="admin-actions">
+          <button class="btn" type="submit">{{ 'Cập nhật' if edit_template else 'Tạo template' }}</button>
+          {% if edit_template %}<a class="btn-outline" href="{{ url_for('admin.cv_templates') }}">Hủy chỉnh sửa</a>{% endif %}
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h2>Danh sách template</h2>
+          <p>Có thể dùng cho màn tạo CV bên candidate. Bảng này nên là nguồn dữ liệu duy nhất cho template.</p>
+        </div>
+      </div>
+      <div class="table-wrap users-table-wrap">
+        <table class="table users-table">
+          <thead>
+            <tr>
+              <th>Template</th>
+              <th>Format</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for template in templates %}
+              <tr>
+                <td>
+                  <strong>{{ template.name }}</strong><br>
+                  <small>{{ template.summary or 'Chưa có tóm tắt' }}</small>
+                </td>
+                <td>{{ template.file_format }}</td>
+                <td>
+                  {% if template.is_active %}
+                    <span class="admin-pill admin-pill--green">active</span>
+                  {% else %}
+                    <span class="admin-pill admin-pill--slate">inactive</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="row-actions row-actions--tight">
+                    <a class="btn-small btn-outline action-btn" href="{{ url_for('admin.cv_templates', edit=template.id) }}">
+                      <span class="action-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M4 20h4l10-10-4-4L4 16v4Z"></path>
+                          <path d="m13 7 4 4"></path>
+                        </svg>
+                      </span>
+                      <span>Sửa</span>
+                    </a>
+                    <form method="post">
+                      <input type="hidden" name="action" value="toggle">
+                      <input type="hidden" name="template_id" value="{{ template.id }}">
+                      <button class="btn-small btn-outline action-btn" type="submit">
+                        <span class="action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 5c5 0 9 7 9 7s-4 7-9 7-9-7-9-7 4-7 9-7Z"></path>
+                            <circle cx="12" cy="12" r="2.5"></circle>
+                          </svg>
+                        </span>
+                        <span>{{ 'Ẩn' if template.is_active else 'Hiện' }}</span>
+                      </button>
+                    </form>
+                    <form method="post" onsubmit="return confirm('Xóa template này?');">
+                      <input type="hidden" name="action" value="delete">
+                      <input type="hidden" name="template_id" value="{{ template.id }}">
+                      <button class="btn-small btn-danger action-btn" type="submit">
+                        <span class="action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4h8v2"></path>
+                            <path d="M6 6l1 14h10l1-14"></path>
+                          </svg>
+                        </span>
+                        <span>Xóa</span>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4"><div class="empty-state">Chưa có template CV nào.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</section>
+{% endblock %}

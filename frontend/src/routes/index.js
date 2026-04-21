@@ -76,6 +76,7 @@ export const FOOTER_LINKS = {
 };
 
 export function roleHome(role) {
+  if (role === "admin") return ROUTES.admin.dashboard;
   if (role === "candidate") return ROUTES.candidate.profile;
   if (role === "recruiter") return ROUTES.recruiter.dashboard;
   return ROUTES.home;

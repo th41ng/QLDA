@@ -1,0 +1,134 @@
+﻿{% extends "admin/base.html" %}
+{% block content %}
+<section class="admin-page">
+  <div class="admin-hero">
+    <div>
+      <span class="eyebrow">Tags</span>
+      <h1>Quản lý tag</h1>
+      <p>Tag là dữ liệu quan trọng cho tìm kiếm job, gán kỹ năng vào CV và tính năng matching/sàng lọc.</p>
+    </div>
+  </div>
+
+  <div class="admin-stats">
+    <article class="stat-card"><span>Total</span><strong>{{ total_tags }}</strong><p>Tổng số tag</p></article>
+  </div>
+
+  <div class="admin-duo">
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h2>{{ 'Chỉnh sửa tag' if edit_tag else 'Tạo tag mới' }}</h2>
+          <p>Slug sẽ tự tạo từ tên nếu bạn bỏ trống. Tag phải gắn vào đúng category để thống kê và filter hoạt động chính xác.</p>
+        </div>
+      </div>
+
+      <form method="post" class="admin-form">
+        <input type="hidden" name="action" value="save">
+        <input type="hidden" name="tag_id" value="{{ edit_tag.id if edit_tag else '' }}">
+        <div class="form-grid">
+          <label class="field"><span>Name</span><input name="name" value="{{ edit_tag.name if edit_tag else '' }}" required></label>
+          <label class="field"><span>Slug</span><input name="slug" value="{{ edit_tag.slug if edit_tag else '' }}"></label>
+          <label class="field"><span>Category</span>
+            <select name="category_id" required>
+              <option value="">Chọn category</option>
+              {% for category in categories %}
+                <option value="{{ category.id }}" {% if edit_tag and edit_tag.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="field full"><span>Description</span><textarea name="description" rows="4">{{ edit_tag.description if edit_tag and edit_tag.description else '' }}</textarea></label>
+          <label class="field full checkbox-row">
+            <input type="checkbox" name="is_active" {% if edit_tag and edit_tag.is_active %}checked{% elif not edit_tag %}checked{% endif %}>
+            <span>Active</span>
+          </label>
+        </div>
+        <div class="admin-actions">
+          <button class="btn" type="submit">{{ 'Cập nhật' if edit_tag else 'Tạo tag' }}</button>
+          {% if edit_tag %}<a class="btn-outline" href="{{ url_for('admin.tags') }}">Hủy chỉnh sửa</a>{% endif %}
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <div>
+          <h2>Danh sách tag</h2>
+          <p>Các tag đang dùng trong job, resume tags và màn sàng lọc CV.</p>
+        </div>
+      </div>
+      <div class="table-wrap users-table-wrap">
+        <table class="table users-table">
+          <thead>
+            <tr>
+              <th>Tag</th>
+              <th>Category</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tag in tags %}
+              <tr>
+                <td>
+                  <strong>{{ tag.name }}</strong><br>
+                  <small>{{ tag.description or 'Chưa có mô tả' }}</small>
+                </td>
+                <td>{{ tag.category.name if tag.category else 'N/A' }}</td>
+                <td>
+                  {% if tag.is_active %}
+                    <span class="admin-pill admin-pill--green">active</span>
+                  {% else %}
+                    <span class="admin-pill admin-pill--slate">inactive</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="row-actions row-actions--tight">
+                    <a class="btn-small btn-outline action-btn" href="{{ url_for('admin.tags', edit=tag.id) }}">
+                      <span class="action-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M4 20h4l10-10-4-4L4 16v4Z"></path>
+                          <path d="m13 7 4 4"></path>
+                        </svg>
+                      </span>
+                      <span>Sửa</span>
+                    </a>
+                    <form method="post">
+                      <input type="hidden" name="action" value="toggle">
+                      <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                      <button class="btn-small btn-outline action-btn" type="submit">
+                        <span class="action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 5c5 0 9 7 9 7s-4 7-9 7-9-7-9-7 4-7 9-7Z"></path>
+                            <circle cx="12" cy="12" r="2.5"></circle>
+                          </svg>
+                        </span>
+                        <span>{{ 'Ẩn' if tag.is_active else 'Hiện' }}</span>
+                      </button>
+                    </form>
+                    <form method="post" onsubmit="return confirm('Xóa tag này?');">
+                      <input type="hidden" name="action" value="delete">
+                      <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                      <button class="btn-small btn-danger action-btn" type="submit">
+                        <span class="action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4h8v2"></path>
+                            <path d="M6 6l1 14h10l1-14"></path>
+                          </svg>
+                        </span>
+                        <span>Xóa</span>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4"><div class="empty-state">Chưa có tag nào.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</section>
+{% endblock %}
