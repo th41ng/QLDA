@@ -5,9 +5,6 @@ import { useAuth } from "./context/AuthContext";
 import { ROUTES, roleHome } from "./routes";
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
-import AdminLoginPage from "./pages/admin/AdminLoginPage";
-import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
-import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import JobsPage from "./pages/JobsPage";
 import JobDetailPage from "./pages/JobDetailPage";
 import CandidateProfilePage from "./pages/candidate/ProfilePage";
@@ -32,9 +29,6 @@ export default function App() {
       <Routes>
         <Route path={ROUTES.home} element={<LandingPage />} />
         <Route path={ROUTES.auth} element={user ? <Navigate to={roleHome(user.role)} replace /> : <AuthPage />} />
-        <Route path={ROUTES.admin.login} element={user?.role === "admin" ? <Navigate to={ROUTES.admin.dashboard} replace /> : <AdminLoginPage />} />
-        <Route path={ROUTES.admin.dashboard} element={<ProtectedRoute roles={["admin"]}><AdminDashboardPage /></ProtectedRoute>} />
-        <Route path={ROUTES.admin.users} element={<ProtectedRoute roles={["admin"]}><AdminUsersPage /></ProtectedRoute>} />
         <Route path={ROUTES.jobs} element={<JobsPage />} />
         <Route path={ROUTES.jobDetail()} element={<JobDetailPage />} />
         <Route path={ROUTES.candidate.profile} element={<ProtectedRoute roles={["candidate"]}><CandidateProfilePage /></ProtectedRoute>} />
