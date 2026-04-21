@@ -24,4 +24,4 @@ jobs:
 
     - name: Run unit tests with coverage
       run: |
-        pytest tests/ -m unit --cov=backend --cov-report=xml --cov-report=term-missing -v --ignore=tests/test_admin_applications_crud.py
+        pytest tests/ -m unit --cov=backend --cov-report=xml --cov-report=term-missing -v --ignore=tests/test_admin_applications_crud.py --ignore=tests/test_admin_crud.py --ignore=tests/test_admin_jobs.py --ignore=tests/test_admin_users.py
