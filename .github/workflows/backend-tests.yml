@@ -2,7 +2,7 @@ name: Backend Tests
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths:
       - 'backend/**'
       - 'tests/**'
@@ -10,7 +10,7 @@ on:
       - 'pytest.ini'
       - '.github/workflows/backend-tests.yml'
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths:
       - 'backend/**'
       - 'tests/**'
