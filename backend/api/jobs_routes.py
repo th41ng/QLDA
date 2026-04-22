@@ -7,8 +7,8 @@ from sqlalchemy.orm import selectinload
 from . import json_error, json_ok, role_required
 from ..core.extensions import db
 from ..core.security import slugify
-from ..core.services.matching_service import score_resume_for_job
-from ..models import Application, Company, JobPosting, Tag
+from ..core.services.matching_service import screen_resume_for_job_with_ai
+from ..models import Application, Company, JobPosting, Resume, Tag
 
 api_jobs_bp = Blueprint("api_jobs", __name__)
 
@@ -76,6 +76,7 @@ def _resume_for_screening(resume):
         "structured_json": resume.structured_json or {},
         "candidate_name": resume.user.full_name if resume.user else None,
         "tags": [_tag_to_dict(tag) for tag in (resume.tags or [])],
+        "updated_at": resume.updated_at.isoformat() if resume.updated_at else None,
     }
 
 
@@ -230,8 +231,8 @@ def screen_job_resumes(job_id):
 
     applications = (
         Application.query.options(
-            selectinload(Application.resume).selectinload("tags"),
-            selectinload(Application.resume).selectinload("user"),
+            selectinload(Application.resume).selectinload(Resume.tags),
+            selectinload(Application.resume).selectinload(Resume.user),
         )
         .filter(Application.job_id == job.id)
         .all()
@@ -241,12 +242,14 @@ def screen_job_resumes(job_id):
     for app in applications:
         if not app.resume:
             continue
-        scored = score_resume_for_job(app.resume, job)
+        scored = screen_resume_for_job_with_ai(app.resume, job)
         results.append(
             {
                 "application_id": app.id,
                 "score": scored.get("score", 0),
                 "breakdown": scored.get("breakdown", {}),
+                "insights": scored.get("insights", {}),
+                "engine": scored.get("engine", {}),
                 "resume": _resume_for_screening(app.resume),
             }
         )

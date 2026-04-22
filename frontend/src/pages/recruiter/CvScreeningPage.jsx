@@ -29,6 +29,13 @@ function skillText(tags) {
   return (tags || []).slice(0, 4).map((tag) => tag.name).join(", ");
 }
 
+function renderEngineLabel(engine) {
+  if (engine?.used_ai) {
+    return `AI · ${engine.model || "LLM"}`;
+  }
+  return "Heuristic";
+}
+
 export default function RecruiterCvScreeningPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [jobs, setJobs] = useState([]);
@@ -110,7 +117,7 @@ export default function RecruiterCvScreeningPage() {
       setLoadingScreen(true);
       setError("");
       try {
-        const data = await api.jobs.screen(selectedJob.id).catch(() => []);
+        const data = await api.jobs.screen(selectedJob.id);
         if (!mounted) return;
         const nextScreening = Array.isArray(data) ? data : [];
         setScreening(nextScreening);
@@ -419,6 +426,7 @@ export default function RecruiterCvScreeningPage() {
                         >
                           {shortlisted ? "Đã shortlist" : "Shortlist"}
                         </button>
+                        <span className="rw-badge rw-badge-slate">{renderEngineLabel(item.engine)}</span>
                         <span className={`cv-screening-band cv-screening-band--${band.tone}`}>{band.label}</span>
                       </div>
                     </article>
@@ -466,6 +474,16 @@ export default function RecruiterCvScreeningPage() {
                 <div className="cv-screening-detail-block">
                   <span>Education</span>
                   <p>{selectedResult.resume?.structured_json?.education || "Chưa có"}</p>
+                </div>
+                <div className="cv-screening-detail-block">
+                  <span>Nhận định AI</span>
+                  <p>{selectedResult.insights?.recommendation || "Chưa có nhận định."}</p>
+                  <p style={{ marginTop: "0.5rem" }}>
+                    Điểm mạnh: {(selectedResult.insights?.strengths || []).join(", ") || "Chưa có"}
+                  </p>
+                  <p style={{ marginTop: "0.35rem" }}>
+                    Rủi ro: {(selectedResult.insights?.concerns || []).join(", ") || "Chưa có"}
+                  </p>
                 </div>
               </>
             ) : (

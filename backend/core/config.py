@@ -38,5 +38,11 @@ class Config:
     CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
     CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 
+    EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "paraphrase-multilingual-MiniLM-L12-v2")
+    EMBEDDING_SCORE_WEIGHT = float(os.getenv("EMBEDDING_SCORE_WEIGHT", 0.35))
+    EMBEDDING_WARMUP_ON_START = os.getenv("EMBEDDING_WARMUP_ON_START", "true").lower() == "true"
+    SCREENING_CACHE_SIZE = int(os.getenv("SCREENING_CACHE_SIZE", 2000))
+    EMBEDDING_VECTOR_CACHE_SIZE = int(os.getenv("EMBEDDING_VECTOR_CACHE_SIZE", 4000))
+
     SEED_DATA = os.getenv("SEED_DATA", "true").lower() == "true"
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=int(os.getenv("JWT_ACCESS_TOKEN_DAYS", 7)))

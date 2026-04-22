@@ -7,6 +7,7 @@ from .api.registry import register_api_blueprints
 from .web.registry import register_web_blueprints
 from .core.config import Config
 from .core.extensions import cors, db, jwt, login_manager, mail, migrate
+from .core.services.matching_service import warmup_embedding_model
 from .repositories import get_user_by_id
 
 
@@ -40,6 +41,21 @@ def create_app():
         Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
         db.create_all()
         _ensure_otp_schema()
+        if app.config.get("EMBEDDING_WARMUP_ON_START", True):
+            warmup_status = warmup_embedding_model()
+            if warmup_status.get("ready"):
+                app.logger.info(
+                    "Embedding model warmed up: provider=%s model=%s",
+                    warmup_status.get("provider"),
+                    warmup_status.get("model"),
+                )
+            else:
+                app.logger.warning(
+                    "Embedding warmup skipped/fallback: provider=%s model=%s reason=%s",
+                    warmup_status.get("provider"),
+                    warmup_status.get("model"),
+                    warmup_status.get("reason"),
+                )
 
     return app
 
