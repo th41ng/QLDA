@@ -28,9 +28,26 @@ const EMPTY_FORM = {
   education: "",
   experience: "",
   skills: "",
+  tag_ids: [],
   additional_info: "",
   is_primary: true,
 };
+
+const RAW_TEXT_FIELDS = [
+  "headline",
+  "summary",
+  "skills",
+  "experience",
+  "education",
+  "additional_info",
+  "current_title",
+];
+
+function buildResumeRawText(source) {
+  return RAW_TEXT_FIELDS.map((field) => String(source?.[field] || "").trim())
+    .filter(Boolean)
+    .join("\n\n");
+}
 
 function buildFormFromSources(user, profile, template = null, resume = null) {
   const structured = resume?.structured_json || {};
@@ -56,7 +73,10 @@ function buildFormFromSources(user, profile, template = null, resume = null) {
     desired_location: structured.desired_location || profile?.desired_location || "",
     education: structured.education || profile?.education || "",
     experience: structured.experience || profile?.experience || "",
-    skills: Array.isArray(structured.skills) ? structured.skills.join(", ") : (structured.skills || ""),
+    skills: Array.isArray(structured.skills_text || structured.skills)
+      ? (structured.skills_text || structured.skills).join(", ")
+      : (structured.skills_text || structured.skills || ""),
+    tag_ids: Array.isArray(resume?.tags) ? resume.tags.filter((tag) => tag.category === "skill").map((tag) => tag.id) : [],
     additional_info: structured.additional_info || "",
     is_primary: resume ? Boolean(resume.is_primary) : true,
   };
@@ -86,7 +106,10 @@ function buildFormFromResume(user, profile, resume, template = null) {
     desired_location: structured.desired_location || profile?.desired_location || "",
     education: structured.education || profile?.education || "",
     experience: structured.experience || profile?.experience || "",
-    skills: Array.isArray(structured.skills) ? structured.skills.join(", ") : (structured.skills || ""),
+    skills: Array.isArray(structured.skills_text || structured.skills)
+      ? (structured.skills_text || structured.skills).join(", ")
+      : (structured.skills_text || structured.skills || ""),
+    tag_ids: Array.isArray(resume?.tags) ? resume.tags.filter((tag) => tag.category === "skill").map((tag) => tag.id) : [],
     additional_info: structured.additional_info || "",
     is_primary: Boolean(resume?.is_primary),
   };
@@ -97,6 +120,7 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [templates, setTemplates] = useState([]);
+  const [skillTags, setSkillTags] = useState([]);
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -121,16 +145,18 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
     const load = async () => {
       setLoading(true);
       try {
-        const [templatesData, userData, profileData, editingResume] = await Promise.all([
+        const [templatesData, userData, profileData, editingResume, skillTagsData] = await Promise.all([
           api.resumes.templates().catch(() => []),
           api.auth.me().catch(() => null),
           api.resumes.getProfile().catch(() => null),
           editingResumeId ? api.resumes.detail(editingResumeId).catch(() => null) : Promise.resolve(null),
+          api.tags.list("?category=skill").catch(() => []),
         ]);
 
         if (!mounted) return;
 
         const normalizedTemplates = Array.isArray(templatesData) ? templatesData : [];
+        const normalizedSkillTags = Array.isArray(skillTagsData) ? skillTagsData : [];
         const templateFromSlug = normalizedTemplates.find((item) => item.slug === initialTemplateSlug) || null;
         const templateFromResume = editingResume
           ? normalizedTemplates.find(
@@ -143,6 +169,7 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
           : null;
 
         setTemplates(normalizedTemplates);
+        setSkillTags(normalizedSkillTags);
         setUser(userData || null);
         setProfile(profileData || null);
 
@@ -218,6 +245,15 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
     });
   };
 
+  const toggleSkillTag = (tagId) => {
+    setForm((current) => {
+      const currentIds = new Set(current.tag_ids || []);
+      if (currentIds.has(tagId)) currentIds.delete(tagId);
+      else currentIds.add(tagId);
+      return { ...current, tag_ids: Array.from(currentIds) };
+    });
+  };
+
   const handleSaveDraft = () => {
     localStorage.setItem("candidate_resume_draft", JSON.stringify(form));
     const timestamp = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
@@ -257,13 +293,14 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
         education: form.education,
         experience: form.experience,
         skills: form.skills,
+        tag_ids: form.tag_ids,
         additional_info: form.additional_info,
         template_id: template?.id || null,
         template_name: template?.name || form.template_name,
         template_slug: template?.slug || form.template_slug,
         template_preview_url: template?.preview_url || form.template_preview_url,
         is_primary: form.is_primary,
-        raw_text: JSON.stringify(form),
+        raw_text: buildResumeRawText(form),
         structured_json: {
           full_name: form.full_name,
           email: form.email,
@@ -280,6 +317,7 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
           education: form.education,
           experience: form.experience,
           skills: form.skills,
+          skills_text: form.skills,
           additional_info: form.additional_info,
           template: {
             id: template?.id || null,
@@ -437,7 +475,9 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
                 <ResumeForm
                   values={form}
                   templates={templates}
+                  skillTags={skillTags}
                   onChange={handleChange}
+                  onToggleSkillTag={toggleSkillTag}
                   onSaveDraft={handleSaveDraft}
                   onPreview={handlePreview}
                   onSubmit={handleSubmit}

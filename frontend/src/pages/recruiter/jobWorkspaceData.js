@@ -25,6 +25,14 @@ export const EXPERIENCE_OPTIONS = [
   { value: "lead", label: "Lead" },
 ];
 
+export const EDUCATION_OPTIONS = [
+  { value: "any", label: "Không yêu cầu" },
+  { value: "highschool", label: "THPT" },
+  { value: "college", label: "Cao đẳng" },
+  { value: "university", label: "Đại học" },
+  { value: "postgraduate", label: "Thạc sĩ / Sau đại học" },
+];
+
 export const CURRENCY_OPTIONS = [
   { value: "VND", label: "VND" },
   { value: "USD", label: "USD" },
@@ -46,6 +54,8 @@ export const DEFAULT_JOB_FORM = {
   salary_max: "",
   salary_currency: "VND",
   vacancy_count: 1,
+  benefits: "",
+  education_level: "any",
   deadline: "",
   status: "published",
   is_featured: false,
@@ -148,6 +158,8 @@ export function buildJobFormFromJob(job) {
     salary_max: job.salary_max ?? "",
     salary_currency: job.salary_currency || "VND",
     vacancy_count: job.vacancy_count ?? 1,
+    benefits: job.benefits || "",
+    education_level: job.education_level || "any",
     deadline: job.deadline || "",
     status: job.status || "published",
     is_featured: Boolean(job.is_featured),
@@ -171,6 +183,8 @@ export function buildJobPayload(form) {
     salary_min: form.salary_min === "" ? null : Number(form.salary_min),
     salary_max: form.salary_max === "" ? null : Number(form.salary_max),
     vacancy_count: form.vacancy_count === "" ? 1 : Number(form.vacancy_count),
+    benefits: String(form.benefits || "").trim(),
+    education_level: form.education_level || "any",
     deadline: form.deadline || "",
     status: form.status || "published",
     is_featured: Boolean(form.is_featured),
