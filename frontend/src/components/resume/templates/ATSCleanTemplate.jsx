@@ -10,6 +10,17 @@ function getRows(value) {
     .filter(Boolean);
 }
 
+function genderLabel(value) {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (!normalized) return "Chưa cập nhật";
+  if (normalized === "male") return "Nam";
+  if (normalized === "female") return "Nữ";
+  if (normalized === "other") return "Khác";
+  return String(value).trim();
+}
+
 export default function ATSCleanTemplate({ data = {} }) {
   const skillRows = getRows(data.skills);
   const expRows = getRows(data.experience);
@@ -17,7 +28,7 @@ export default function ATSCleanTemplate({ data = {} }) {
   const hasAdditionalInfo = Boolean(String(data.additional_info ?? "").trim());
   const metaItems = [
     { label: "Ngày sinh", value: getText(data.dob) },
-    { label: "Giới tính", value: getText(data.gender) },
+    { label: "Giới tính", value: genderLabel(data.gender) },
     {
       label: "Kinh nghiệm",
       value: data.years_experience

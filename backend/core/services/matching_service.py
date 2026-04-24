@@ -1,6 +1,7 @@
 import re
 import os
 import copy
+import unicodedata
 from collections import Counter
 
 try:
@@ -13,6 +14,20 @@ from ...models import JobPosting, MatchScore, Resume, Tag
 STOPWORDS = {
     "and", "or", "the", "of", "to", "in", "with", "a", "an", "for", "on", "at",
     "và", "cho", "của", "với", "là", "from", "by", "job", "work",
+}
+
+TERM_ALIASES = {
+    "backend": {"backend", "back end", "server side", "api"},
+    "frontend": {"frontend", "front end", "ui", "ux", "react", "vue", "angular"},
+    "nodejs": {"nodejs", "node js", "node", "express", "nestjs"},
+    "sql": {"sql", "mysql", "postgres", "postgresql", "mssql", "database", "db"},
+    "ecommerce": {"ecommerce", "e commerce", "thuong mai dien tu", "commerce"},
+    "api": {"api", "rest", "rest api", "graphql"},
+    "payment": {"payment", "thanh toan", "paypal", "stripe", "momo", "vnpay"},
+    "order": {"order", "don hang", "checkout", "cart"},
+    "middle": {"middle", "mid", "mid-level", "2 nam", "3 nam"},
+    "junior": {"junior", "fresher", "intern", "entry"},
+    "senior": {"senior", "lead", "5 nam", "6 nam"},
 }
 
 _EMBEDDING_MODEL = None
@@ -81,13 +96,206 @@ def warmup_embedding_model() -> dict:
 
 
 def tokenize(text: str) -> list[str]:
-    words = re.findall(r"[a-z0-9+#.]+", (text or "").lower())
+    normalized = _normalize_text_for_matching(text)
+    words = re.findall(r"[a-z0-9_+#.]+", normalized)
     return [w for w in words if w not in STOPWORDS and len(w) > 1]
+
+
+def _normalize_text_for_matching(text: str) -> str:
+    normalized = str(text or "").lower()
+    replacements = {
+        "rest api": "rest_api",
+        "node js": "nodejs",
+        "e-commerce": "ecommerce",
+        "e commerce": "ecommerce",
+        "ho chi minh": "hcm",
+        "tp hcm": "hcm",
+        "tp. hcm": "hcm",
+        "tp ho chi minh": "hcm",
+        "tp. ho chi minh": "hcm",
+        "thanh pho ho chi minh": "hcm",
+    }
+    for old, new in replacements.items():
+        normalized = normalized.replace(old, new)
+    normalized = re.sub(r"[^a-z0-9_+#\s]", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized
+
+
+def _normalize_location(value: str) -> str:
+    text = str(value or "").strip().lower()
+    if not text:
+        return ""
+
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = text.replace("thanh pho", "tp")
+    text = text.replace("ho-chi-minh", "ho chi minh")
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+
+    compact = text.replace(" ", "")
+    if compact in {"tphochiminh", "tphcm", "hochiminh", "hcm"}:
+        return "hcm"
+
+    return text
+
+
+def _rule_weights() -> tuple[float, float, float, float]:
+    text_weight = _clamp_number(os.getenv("RULE_TEXT_WEIGHT", "0.40"), 0.0, 1.0, 0.40)
+    tag_weight = _clamp_number(os.getenv("RULE_TAG_WEIGHT", "0.30"), 0.0, 1.0, 0.30)
+    location_weight = _clamp_number(os.getenv("RULE_LOCATION_WEIGHT", "0.15"), 0.0, 1.0, 0.15)
+    experience_weight = _clamp_number(os.getenv("RULE_EXPERIENCE_WEIGHT", "0.15"), 0.0, 1.0, 0.15)
+
+    total = text_weight + tag_weight + location_weight + experience_weight
+    if total <= 0:
+        return 0.40, 0.30, 0.15, 0.15
+    return (
+        text_weight / total,
+        tag_weight / total,
+        location_weight / total,
+        experience_weight / total,
+    )
+
+
+def _final_weights() -> tuple[float, float, float, float, float]:
+    semantic_weight = _clamp_number(os.getenv("FINAL_SEMANTIC_WEIGHT", "0.30"), 0.0, 1.0, 0.30)
+    tag_weight = _clamp_number(os.getenv("FINAL_TAG_WEIGHT", "0.25"), 0.0, 1.0, 0.25)
+    text_weight = _clamp_number(os.getenv("FINAL_TEXT_WEIGHT", "0.15"), 0.0, 1.0, 0.15)
+    experience_weight = _clamp_number(os.getenv("FINAL_EXPERIENCE_WEIGHT", "0.15"), 0.0, 1.0, 0.15)
+    location_weight = _clamp_number(os.getenv("FINAL_LOCATION_WEIGHT", "0.15"), 0.0, 1.0, 0.15)
+
+    total = semantic_weight + tag_weight + text_weight + experience_weight + location_weight
+    if total <= 0:
+        return 0.30, 0.25, 0.15, 0.15, 0.15
+    return (
+        semantic_weight / total,
+        tag_weight / total,
+        text_weight / total,
+        experience_weight / total,
+        location_weight / total,
+    )
+
+
+def _normalize_final_score(raw_score: float, raw_breakdown: dict) -> tuple[float, dict, dict]:
+    normalize_max = _clamp_number(os.getenv("NORMALIZED_SCORE_MAX", "75"), 1.0, 500.0, 75.0)
+    base_scale = 100.0 / normalize_max
+    cap_scale = 100.0 / max(raw_score, 1e-9)
+    scale = min(base_scale, cap_scale)
+
+    normalized_score = round(raw_score * scale, 1)
+    normalized_breakdown = {
+        key: round(float(value or 0) * scale, 1)
+        for key, value in (raw_breakdown or {}).items()
+    }
+    return normalized_score, normalized_breakdown, {
+        "raw_score": round(raw_score, 1),
+        "normalize_max": round(normalize_max, 3),
+        "scale": round(scale, 6),
+    }
 
 
 def tag_text(tag: Tag) -> str:
     category_name = tag.category.name if getattr(tag, "category", None) else ""
     return " ".join(filter(None, [tag.name, category_name, tag.description]))
+
+
+def _tag_keys(tag: Tag) -> set[str]:
+    keys = set()
+    if getattr(tag, "id", None):
+        keys.add(f"id:{tag.id}")
+    slug = str(getattr(tag, "slug", "") or "").strip().lower()
+    if slug:
+        keys.add(f"slug:{slug}")
+    name = str(getattr(tag, "name", "") or "").strip().lower()
+    if name:
+        keys.add(f"name:{name}")
+    return keys
+
+
+def _match_job_tags_in_resume_text(resume: Resume, job: JobPosting) -> int:
+    """Best-effort tag matching from CV content when explicit resume.tags is missing/incomplete."""
+    source_text_raw = " ".join(
+        filter(
+            None,
+            [
+                resume.title,
+                resume.raw_text,
+                str((resume.structured_json or {}).get("skills") or ""),
+                str((resume.structured_json or {}).get("headline") or ""),
+                str((resume.structured_json or {}).get("summary") or ""),
+                str((resume.structured_json or {}).get("experience") or ""),
+            ],
+        )
+    )
+    source_text = _normalize_text_for_matching(source_text_raw)
+    source_tokens = set(tokenize(source_text))
+
+    hits = 0
+    for tag in (job.tags or []):
+        candidates = _tag_candidates(tag)
+        if any((candidate in source_tokens) or (candidate in source_text) for candidate in candidates):
+            hits += 1
+    return hits
+
+
+def _tag_candidates(tag: Tag) -> set[str]:
+    candidates = set()
+    slug = _normalize_text_for_matching(getattr(tag, "slug", "") or "")
+    name = _normalize_text_for_matching(getattr(tag, "name", "") or "")
+    if slug:
+        candidates.add(slug)
+    if name:
+        candidates.add(name)
+    for value in list(candidates):
+        if value in TERM_ALIASES:
+            candidates.update({_normalize_text_for_matching(alias) for alias in TERM_ALIASES[value]})
+    return {item for item in candidates if item}
+
+
+def _explicit_tag_match_count(resume: Resume, job: JobPosting) -> int:
+    resume_slug_set = {
+        _normalize_text_for_matching(getattr(tag, "slug", "") or "")
+        for tag in (resume.tags or [])
+        if getattr(tag, "slug", None)
+    }
+    resume_name_set = {
+        _normalize_text_for_matching(getattr(tag, "name", "") or "")
+        for tag in (resume.tags or [])
+        if getattr(tag, "name", None)
+    }
+    hits = 0
+    for job_tag in (job.tags or []):
+        candidates = _tag_candidates(job_tag)
+        if candidates & resume_slug_set or candidates & resume_name_set:
+            hits += 1
+    return hits
+
+
+def _job_keyword_bonus(resume: Resume, job: JobPosting) -> float:
+    resume_text = _normalize_text_for_matching(resume_profile_text(resume))
+    resume_tokens = set(tokenize(resume_text))
+    if not resume_tokens:
+        return 0.0
+
+    job_keywords = set()
+    for tag in (job.tags or []):
+        job_keywords.update(_tag_candidates(tag))
+
+    headline_title = _normalize_text_for_matching(" ".join(filter(None, [job.title, job.summary])))
+    for token in tokenize(headline_title):
+        if len(token) > 2 and token not in STOPWORDS:
+            job_keywords.add(token)
+
+    if not job_keywords:
+        return 0.0
+
+    matched = 0
+    for kw in job_keywords:
+        if kw in resume_tokens or kw in resume_text:
+            matched += 1
+    ratio = matched / max(len(job_keywords), 1)
+    return min(0.35, ratio * 0.35)
 
 
 def job_profile_text(job: JobPosting) -> str:
@@ -135,20 +343,76 @@ def score_resume_for_job(resume: Resume, job: JobPosting) -> dict:
         return {"score": 0, "breakdown": {"tags": 0, "text": 0, "location": 0, "experience": 0}}
 
     shared = set(resume_tokens) & set(job_tokens)
-    text_score = sum(min(resume_tokens[t], job_tokens[t]) for t in shared) / max(sum(job_tokens.values()), 1)
-    tag_match = len({tag.slug for tag in resume.tags} & {tag.slug for tag in job.tags})
-    tag_score = tag_match / max(len(job.tags), 1)
-    location_score = 1 if (job.location or "").lower() in (resume.structured_json or {}).get("desired_location", "").lower() else 0
-    experience_score = 1 if (resume.structured_json or {}).get("years_experience", 0) >= _experience_floor(job.experience_level) else 0
+    coverage_score = sum(min(resume_tokens[t], job_tokens[t]) for t in shared) / max(sum(job_tokens.values()), 1)
+    keyword_bonus = _job_keyword_bonus(resume, job)
+    text_score = min(1.0, (coverage_score * 0.8) + keyword_bonus)
 
-    score = round(min(100, (text_score * 45) + (tag_score * 35) + (location_score * 10) + (experience_score * 10)), 1)
+    explicit_tag_match = _explicit_tag_match_count(resume, job)
+
+    inferred_tag_match = _match_job_tags_in_resume_text(resume, job)
+    job_tag_count = len(job.tags or [])
+    # Keep tag matching bounded by number of required job tags.
+    tag_match = min(max(explicit_tag_match, inferred_tag_match), job_tag_count)
+    tag_score = tag_match / max(len(job.tags), 1)
+    normalized_job_location = _normalize_location(job.location or "")
+    normalized_resume_location = _normalize_location((resume.structured_json or {}).get("desired_location", ""))
+    location_score = 1 if normalized_job_location and normalized_job_location in normalized_resume_location else 0
+    required_years = _experience_floor(job.experience_level)
+    years = float((resume.structured_json or {}).get("years_experience", 0) or 0)
+    if required_years <= 0:
+        experience_score = 1.0
+    else:
+        experience_score = max(0.0, min(years / required_years, 1.0))
+
+    text_weight, tag_weight, location_weight, experience_weight = _rule_weights()
+
+    score = round(
+        min(
+            100,
+            (text_score * (text_weight * 100))
+            + (tag_score * (tag_weight * 100))
+            + (location_score * (location_weight * 100))
+            + (experience_score * (experience_weight * 100)),
+        ),
+        1,
+    )
     breakdown = {
-        "text": round(text_score * 45, 1),
-        "tags": round(tag_score * 35, 1),
-        "location": round(location_score * 10, 1),
-        "experience": round(experience_score * 10, 1),
+        "text": round(text_score * (text_weight * 100), 1),
+        "tags": round(tag_score * (tag_weight * 100), 1),
+        "location": round(location_score * (location_weight * 100), 1),
+        "experience": round(experience_score * (experience_weight * 100), 1),
     }
-    return {"score": score, "breakdown": breakdown}
+    factors = {
+        "text": round(text_score, 6),
+        "tags": round(tag_score, 6),
+        "location": round(location_score, 6),
+        "experience": round(experience_score, 6),
+    }
+    debug = {
+        "text": {
+            "shared_tokens": len(shared),
+            "coverage_score": round(coverage_score, 6),
+            "keyword_bonus": round(keyword_bonus, 6),
+        },
+        "tags": {
+            "job_tag_count": job_tag_count,
+            "explicit_match": explicit_tag_match,
+            "inferred_match": inferred_tag_match,
+            "final_match": tag_match,
+            "score_ratio": round(tag_score, 6),
+        },
+        "location": {
+            "job_normalized": normalized_job_location,
+            "resume_normalized": normalized_resume_location,
+            "matched": bool(location_score),
+        },
+        "experience": {
+            "required_years": required_years,
+            "resume_years": round(years, 2),
+            "score_ratio": round(experience_score, 6),
+        },
+    }
+    return {"score": score, "breakdown": breakdown, "factors": factors, "debug": debug}
 
 
 def screen_resume_for_job_with_ai(resume: Resume, job: JobPosting) -> dict:
@@ -162,27 +426,72 @@ def screen_resume_for_job_with_ai(resume: Resume, job: JobPosting) -> dict:
 
     base = score_resume_for_job(resume, job)
 
-    embedding_score = _embedding_similarity_score(resume, job)
-    has_embedding = embedding_score is not None
-    if has_embedding:
-        embedding_weight = _clamp_number(os.getenv("EMBEDDING_SCORE_WEIGHT", "0.35"), 0.1, 0.7, 0.35)
-        blended_score = round((base["score"] * (1 - embedding_weight)) + (embedding_score * embedding_weight), 1)
-    else:
-        blended_score = base["score"]
+    factors = base.get("factors") or {}
+    text_factor = _clamp_number(factors.get("text", 0), 0.0, 1.0, 0.0)
+    tag_factor = _clamp_number(factors.get("tags", 0), 0.0, 1.0, 0.0)
+    location_factor = _clamp_number(factors.get("location", 0), 0.0, 1.0, 0.0)
+    experience_factor = _clamp_number(factors.get("experience", 0), 0.0, 1.0, 0.0)
 
-    hybrid_breakdown = dict(base["breakdown"])
-    hybrid_breakdown["semantic"] = round(embedding_score if has_embedding else 0, 1)
+    embedding_score_raw = _embedding_similarity_score(resume, job)
+    embedding_score = _calibrate_semantic_score(embedding_score_raw, base)
+    has_embedding = embedding_score is not None
+
+    semantic_factor = max(0.0, min(1.0, (embedding_score or 0) / 100.0))
+    lexical_gate = max(0.0, min(1.0, (tag_factor * 0.6) + (text_factor * 0.4)))
+    semantic_effective = semantic_factor * lexical_gate
+
+    final_semantic_w, final_tag_w, final_text_w, final_exp_w, final_location_w = _final_weights()
+    raw_final_score = round(
+        (
+            (semantic_effective * (final_semantic_w * 100))
+            + (tag_factor * (final_tag_w * 100))
+            + (text_factor * (final_text_w * 100))
+            + (experience_factor * (final_exp_w * 100))
+            + (location_factor * (final_location_w * 100))
+        ),
+        1,
+    )
+
+    raw_breakdown = {
+        "semantic": round(semantic_effective * (final_semantic_w * 100), 1),
+        "tags": round(tag_factor * (final_tag_w * 100), 1),
+        "text": round(text_factor * (final_text_w * 100), 1),
+        "experience": round(experience_factor * (final_exp_w * 100), 1),
+        "location": round(location_factor * (final_location_w * 100), 1),
+    }
+
+    blended_score, hybrid_breakdown, normalization_meta = _normalize_final_score(raw_final_score, raw_breakdown)
 
     fallback = {
         "score": blended_score,
         "breakdown": hybrid_breakdown,
         "insights": _build_hybrid_insights(resume, job, base, embedding_score),
+        "debug": {
+            "base": base.get("debug", {}),
+            "semantic": {
+                "raw": round(embedding_score_raw or 0, 1),
+                "calibrated": round(embedding_score or 0, 1),
+                "gate": round(lexical_gate, 6),
+                "effective_ratio": round(semantic_effective, 6),
+            },
+            "normalization": normalization_meta,
+            "final_weights": {
+                "semantic": round(final_semantic_w, 6),
+                "tags": round(final_tag_w, 6),
+                "text": round(final_text_w, 6),
+                "experience": round(final_exp_w, 6),
+                "location": round(final_location_w, 6),
+            },
+        },
         "engine": {
             "provider": "sentence-transformers" if has_embedding else "heuristic",
             "model": (os.getenv("EMBEDDING_MODEL_NAME") or "paraphrase-multilingual-MiniLM-L12-v2") if has_embedding else "rule-based-v1",
             "used_ai": bool(has_embedding),
             "used_embedding": bool(has_embedding),
             "cached": False,
+            "semantic_raw": round(embedding_score_raw or 0, 1),
+            "semantic_calibrated": round(embedding_score or 0, 1),
+            "semantic_gate": round(lexical_gate, 3),
         },
     }
 
@@ -202,44 +511,44 @@ def _build_hybrid_insights(resume: Resume, job: JobPosting, base: dict, embeddin
 
     strengths = []
     concerns = []
-    recommendation = "Can xem xet them truoc khi moi phong van."
+    recommendation = "Cần xem xét thêm trước khi mời phỏng vấn."
 
     score = float(base.get("score", 0) or 0)
     if overlap:
-        strengths.append(f"Trung khop {len(overlap)} ky nang/tag voi job.")
+        strengths.append(f"Trùng khớp {len(overlap)} kỹ năng/tag với job.")
     if score >= 85:
-        strengths.append("Muc do phu hop tong the cao so voi mo ta cong viec.")
-        recommendation = "Nen uu tien moi phong van vong dau."
+        strengths.append("Mức độ phù hợp tổng thể cao so với mô tả công việc.")
+        recommendation = "Nên ưu tiên mời phỏng vấn vòng đầu."
     elif score >= 70:
-        strengths.append("Ho so co nhieu diem phu hop voi nhu cau tuyen dung.")
-        recommendation = "Nen dua vao danh sach can nhac phong van."
+        strengths.append("Hồ sơ có nhiều điểm phù hợp với nhu cầu tuyển dụng.")
+        recommendation = "Nên đưa vào danh sách cân nhắc phỏng vấn."
     else:
-        concerns.append("Muc do phu hop tong the chua cao theo bo tieu chi hien tai.")
+        concerns.append("Mức độ phù hợp tổng thể chưa cao theo bộ tiêu chí hiện tại.")
 
-    desired_location = ((resume.structured_json or {}).get("desired_location") or "").strip().lower()
-    job_location = (job.location or "").strip().lower()
-    if job_location and desired_location and job_location not in desired_location:
-        concerns.append("Dia diem mong muon cua ung vien co the chua phu hop voi job.")
+    desired_location = _normalize_location((resume.structured_json or {}).get("desired_location", ""))
+    job_location = _normalize_location(job.location or "")
+    if job_location and desired_location and job_location not in desired_location and desired_location not in job_location:
+        concerns.append("Địa điểm trong CV chưa trùng khớp rõ ràng với vị trí tuyển dụng.")
 
     years = (resume.structured_json or {}).get("years_experience", 0) or 0
     if years < _experience_floor(job.experience_level):
-        concerns.append("So nam kinh nghiem co the thap hon muc yeu cau.")
+        concerns.append("Số năm kinh nghiệm có thể thấp hơn mức yêu cầu.")
     else:
-        strengths.append("Kinh nghiem lam viec dat nguong yeu cau co ban.")
+        strengths.append("Kinh nghiệm làm việc đạt ngưỡng yêu cầu cơ bản.")
 
     if not strengths:
-        strengths.append("Ho so da co du lieu co ban de tiep tuc danh gia.")
+        strengths.append("Hồ sơ đã có dữ liệu cơ bản để tiếp tục đánh giá.")
     if not concerns:
-        concerns.append("Chua phat hien rui ro lon tu du lieu CV hien tai.")
+        concerns.append("Chưa phát hiện rủi ro lớn từ dữ liệu CV hiện tại.")
 
     if embedding_score is None:
-        concerns.append("Chua co semantic embedding do thieu package/model.")
+        concerns.append("Chưa có semantic embedding do thiếu package/model.")
     elif embedding_score >= 82:
-        strengths.append("Noi dung CV co do tuong dong ngu nghia cao voi mo ta job.")
+        strengths.append("Nội dung CV có độ tương đồng ngữ nghĩa cao với mô tả job.")
     elif embedding_score >= 65:
-        strengths.append("Noi dung CV co tuong dong ngu nghia muc trung binh-kha.")
+        strengths.append("Nội dung CV có tương đồng ngữ nghĩa mức trung bình-khá.")
     else:
-        concerns.append("Do tuong dong ngu nghia thap, can doc ky kinh nghiem lien quan.")
+        concerns.append("Độ tương đồng ngữ nghĩa thấp, cần đọc kỹ kinh nghiệm liên quan.")
 
     return {
         "strengths": strengths[:3],
@@ -290,9 +599,26 @@ def _embedding_similarity_score(resume: Resume, job: JobPosting) -> float | None
     return round(max(0.0, min(100.0, ((similarity + 1) / 2) * 100)), 1)
 
 
+def _calibrate_semantic_score(raw_score: float | None, base: dict) -> float | None:
+    if raw_score is None:
+        return None
+
+    # Stretch useful range and suppress generic "same domain" similarities.
+    stretched = max(0.0, min(100.0, ((raw_score - 45.0) / 55.0) * 100.0))
+
+    breakdown = base.get("breakdown") or {}
+    lexical_quality = float((breakdown.get("text", 0) or 0) + (breakdown.get("tags", 0) or 0))
+    lexical_ratio = max(0.0, min(1.0, lexical_quality / 70.0))
+    gated = stretched * (0.55 + (0.45 * lexical_ratio))
+    return round(max(0.0, min(100.0, gated)), 1)
+
+
 def _screening_cache_key(resume: Resume, job: JobPosting) -> tuple:
     model_name = (os.getenv("EMBEDDING_MODEL_NAME") or "paraphrase-multilingual-MiniLM-L12-v2").strip()
-    score_weight = _clamp_number(os.getenv("EMBEDDING_SCORE_WEIGHT", "0.35"), 0.1, 0.7, 0.35)
+    score_weight = _clamp_number(os.getenv("EMBEDDING_SCORE_WEIGHT", "0.30"), 0.1, 0.7, 0.30)
+    normalized_score_max = _clamp_number(os.getenv("NORMALIZED_SCORE_MAX", "75"), 1.0, 500.0, 75.0)
+    text_weight, tag_weight, location_weight, experience_weight = _rule_weights()
+    final_semantic_w, final_tag_w, final_text_w, final_exp_w, final_location_w = _final_weights()
     resume_stamp = getattr(resume, "updated_at", None)
     job_stamp = getattr(job, "updated_at", None)
     return (
@@ -302,6 +628,16 @@ def _screening_cache_key(resume: Resume, job: JobPosting) -> tuple:
         job_stamp.isoformat() if job_stamp else "",
         model_name,
         round(score_weight, 3),
+        round(normalized_score_max, 3),
+        round(text_weight, 3),
+        round(tag_weight, 3),
+        round(location_weight, 3),
+        round(experience_weight, 3),
+        round(final_semantic_w, 3),
+        round(final_tag_w, 3),
+        round(final_text_w, 3),
+        round(final_exp_w, 3),
+        round(final_location_w, 3),
     )
 
 
@@ -329,7 +665,7 @@ def _experience_floor(experience_level: str) -> int:
     if "senior" in level:
         return 5
     if "middle" in level or "mid" in level:
-        return 3
+        return 2
     if "junior" in level or "fresher" in level:
         return 0
     return 1

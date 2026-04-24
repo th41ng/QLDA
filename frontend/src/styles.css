@@ -7750,7 +7750,7 @@ ul { padding-left:18px; color:var(--muted); }
   left: -20000px;
   top: 0;
   width: 794px;
-  opacity: 0;
+  opacity: 1;
   pointer-events: none;
   background: #ffffff;
   z-index: -1;
@@ -7770,6 +7770,19 @@ ul { padding-left:18px; color:var(--muted); }
   border-radius: 0;
   border: 0;
   box-shadow: none;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+.rw-pdf-export-sheet .cv-template,
+.rw-pdf-export-sheet .cv-template *,
+.rw-pdf-export-sheet .cv-template *::before,
+.rw-pdf-export-sheet .cv-template *::after {
+  animation: none !important;
+  transition: none !important;
 }
 
 .rw-pdf-export-sheet .cv-pre-wrap,

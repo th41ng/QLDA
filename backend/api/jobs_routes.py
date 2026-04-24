@@ -80,6 +80,37 @@ def _resume_for_screening(resume):
     }
 
 
+def _screen_results_for_job(job: JobPosting, include_debug: bool = False):
+    applications = (
+        Application.query.options(
+            selectinload(Application.resume).selectinload(Resume.tags),
+            selectinload(Application.resume).selectinload(Resume.user),
+        )
+        .filter(Application.job_id == job.id)
+        .all()
+    )
+
+    results = []
+    for app in applications:
+        if not app.resume:
+            continue
+        scored = screen_resume_for_job_with_ai(app.resume, job)
+        payload = {
+            "application_id": app.id,
+            "score": scored.get("score", 0),
+            "breakdown": scored.get("breakdown", {}),
+            "insights": scored.get("insights", {}),
+            "engine": scored.get("engine", {}),
+            "resume": _resume_for_screening(app.resume),
+        }
+        if include_debug:
+            payload["debug"] = scored.get("debug", {})
+        results.append(payload)
+
+    results.sort(key=lambda item: item["score"], reverse=True)
+    return results
+
+
 @api_jobs_bp.get("")
 def list_jobs():
     status = (request.args.get("status") or "").strip().lower()
@@ -229,30 +260,31 @@ def screen_job_resumes(job_id):
     if not job:
         return json_error("Job not found.", 404)
 
-    applications = (
-        Application.query.options(
-            selectinload(Application.resume).selectinload(Resume.tags),
-            selectinload(Application.resume).selectinload(Resume.user),
-        )
-        .filter(Application.job_id == job.id)
-        .all()
-    )
-
-    results = []
-    for app in applications:
-        if not app.resume:
-            continue
-        scored = screen_resume_for_job_with_ai(app.resume, job)
-        results.append(
-            {
-                "application_id": app.id,
-                "score": scored.get("score", 0),
-                "breakdown": scored.get("breakdown", {}),
-                "insights": scored.get("insights", {}),
-                "engine": scored.get("engine", {}),
-                "resume": _resume_for_screening(app.resume),
-            }
-        )
-
-    results.sort(key=lambda item: item["score"], reverse=True)
+    include_debug = (request.args.get("debug") or "").strip().lower() in {"1", "true", "yes"}
+    results = _screen_results_for_job(job, include_debug=include_debug)
     return json_ok(results)
+
+
+@api_jobs_bp.get("/<int:job_id>/screen/debug")
+@jwt_required()
+@role_required("recruiter", "admin")
+def screen_job_resumes_debug(job_id):
+    user_id = int(get_jwt_identity())
+    job = JobPosting.query.options(selectinload(JobPosting.tags)).filter_by(id=job_id, recruiter_user_id=user_id).first()
+    if not job:
+        return json_error("Job not found.", 404)
+
+    results = _screen_results_for_job(job, include_debug=True)
+    return json_ok(
+        {
+            "job": {
+                "id": job.id,
+                "title": job.title,
+                "experience_level": job.experience_level,
+                "location": job.location,
+                "tag_count": len(job.tags or []),
+                "tags": [_tag_to_dict(tag) for tag in (job.tags or [])],
+            },
+            "results": results,
+        }
+    )

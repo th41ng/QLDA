@@ -50,6 +50,7 @@ export default function RecruiterCvScreeningPage() {
   const [scoreFilter, setScoreFilter] = useState("all");
   const [selectedResumeId, setSelectedResumeId] = useState(null);
   const [shortlistedIds, setShortlistedIds] = useState([]);
+  const [debugMode, setDebugMode] = useState(false);
 
   const selectedJobId = Number(searchParams.get("job") || 0) || null;
 
@@ -117,7 +118,10 @@ export default function RecruiterCvScreeningPage() {
       setLoadingScreen(true);
       setError("");
       try {
-        const data = await api.jobs.screen(selectedJob.id);
+        const payload = debugMode
+          ? await api.jobs.screenDebug(selectedJob.id)
+          : await api.jobs.screen(selectedJob.id);
+        const data = debugMode ? payload?.results : payload;
         if (!mounted) return;
         const nextScreening = Array.isArray(data) ? data : [];
         setScreening(nextScreening);
@@ -138,7 +142,7 @@ export default function RecruiterCvScreeningPage() {
     return () => {
       mounted = false;
     };
-  }, [selectedJob?.id]);
+  }, [selectedJob?.id, debugMode]);
 
   const filteredScreening = useMemo(() => {
     const keyword = normalizeText(query);
@@ -284,10 +288,25 @@ export default function RecruiterCvScreeningPage() {
               <option value="70">Từ 70+</option>
             </select>
           </label>
+          <label style={{ alignSelf: "end" }}>
+            <button
+              type="button"
+              className={debugMode ? "rw-btn-outline-lg" : "btn"}
+              onClick={() => setDebugMode((value) => !value)}
+            >
+              {debugMode ? "Tắt Debug" : "Bật Debug"}
+            </button>
+          </label>
         </div>
         <div className="cv-screening-toolbar-note">
           <strong>API data</strong>
-          <span>{loadingJobs || loadingScreen ? "Đang tải dữ liệu..." : "Sẵn sàng sàng lọc"}</span>
+          <span>
+            {loadingJobs || loadingScreen
+              ? "Đang tải dữ liệu..."
+              : debugMode
+                ? "Debug mode: đang hiển thị dữ liệu giải thích điểm"
+                : "Sẵn sàng sàng lọc"}
+          </span>
         </div>
       </div>
 
@@ -485,6 +504,37 @@ export default function RecruiterCvScreeningPage() {
                     Rủi ro: {(selectedResult.insights?.concerns || []).join(", ") || "Chưa có"}
                   </p>
                 </div>
+                {debugMode ? (
+                  <div className="cv-screening-detail-block">
+                    <span>Debug Scoring</span>
+                    <p>
+                      Tag match: {selectedResult.debug?.base?.tags?.final_match ?? 0}/
+                      {selectedResult.debug?.base?.tags?.job_tag_count ?? 0}
+                      {" · "}
+                      explicit: {selectedResult.debug?.base?.tags?.explicit_match ?? 0}
+                      {" · "}
+                      inferred: {selectedResult.debug?.base?.tags?.inferred_match ?? 0}
+                    </p>
+                    <p style={{ marginTop: "0.35rem" }}>
+                      Text coverage: {Number(selectedResult.debug?.base?.text?.coverage_score || 0).toFixed(3)}
+                      {" · "}
+                      keyword bonus: {Number(selectedResult.debug?.base?.text?.keyword_bonus || 0).toFixed(3)}
+                    </p>
+                    <p style={{ marginTop: "0.35rem" }}>
+                      Exp: {selectedResult.debug?.base?.experience?.resume_years ?? 0} năm /
+                      {selectedResult.debug?.base?.experience?.required_years ?? 0} năm
+                      {" · ratio "}
+                      {Number(selectedResult.debug?.base?.experience?.score_ratio || 0).toFixed(3)}
+                    </p>
+                    <p style={{ marginTop: "0.35rem" }}>
+                      Semantic raw: {Number(selectedResult.debug?.semantic?.raw || 0).toFixed(1)}
+                      {" · calibrated: "}
+                      {Number(selectedResult.debug?.semantic?.calibrated || 0).toFixed(1)}
+                      {" · gate: "}
+                      {Number(selectedResult.debug?.semantic?.gate || 0).toFixed(3)}
+                    </p>
+                  </div>
+                ) : null}
               </>
             ) : (
               <div className="cv-screening-empty">Chọn một hồ sơ để xem chi tiết.</div>
