@@ -25,8 +25,8 @@ export default function ResumeUploadCard({ file, onPickFile, onSubmitUpload, bus
       >
         <div className="rw-upload-dropzone-icon">CV</div>
         <div className="rw-upload-dropzone-copy">
-          <h3>Upload CV có sẵn</h3>
-          <p>Kéo thả file PDF, DOC hoặc DOCX vào đây, hoặc chọn file từ máy để lưu vào database.</p>
+          <h3>Tải lên CV có sẵn</h3>
+          <p>Kéo thả file PDF, DOC hoặc DOCX vào đây, hoặc chọn file từ máy để lưu vào CV của tôi.</p>
         </div>
 
         <div className="rw-upload-format-row">
@@ -46,11 +46,11 @@ export default function ResumeUploadCard({ file, onPickFile, onSubmitUpload, bus
             />
           </label>
           <button type="button" className="btn" onClick={onSubmitUpload} disabled={!file || busy}>
-            {busy ? "Đang upload..." : "Upload CV"}
+            {busy ? "Đang tải lên..." : "Tải lên CV"}
           </button>
         </div>
 
-        <p className="rw-upload-hint">{file ? `Đã chọn: ${file.name}` : "Kéo thả file vào đây để upload nhanh."}</p>
+        <p className="rw-upload-hint">{file ? `Đã chọn: ${file.name}` : "Kéo thả file vào đây để tải lên nhanh."}</p>
       </div>
     </section>
   );

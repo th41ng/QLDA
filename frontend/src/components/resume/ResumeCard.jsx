@@ -22,6 +22,14 @@ function formatDate(value) {
   }
 }
 
+function formatFileType(resume) {
+  const ext = String(resume.file_ext || resume.original_filename?.split(".").pop() || "file")
+    .replace(/^\./, "")
+    .trim()
+    .toUpperCase();
+  return ext || "FILE";
+}
+
 function getTemplateVariant(resume, template) {
   if (resume.source_type === "upload") return "upload";
   const key = String(template?.slug || template?.name || resume.template_name || "")
@@ -32,17 +40,18 @@ function getTemplateVariant(resume, template) {
   return "modern";
 }
 
-export default function ResumeCard({ resume, active, onPreview, onEdit, onDownload, onSetPrimary, onDelete }) {
+export default function ResumeCard({ resume, active, onPreview, onEdit, onDownload, onSetPrimary, onDelete, onConvertToTemplate }) {
   const structured = resume.structured_json || {};
   const template = structured.template || {};
   const skills = toSkillList(structured.skills).slice(0, 3);
   const tags = (resume.tags || []).map((tag) => tag.name).filter(Boolean).slice(0, 3);
   const isUpload = resume.source_type === "upload";
   const variant = getTemplateVariant(resume, template);
+  const fileType = formatFileType(resume);
   const previewName = isUpload ? resume.original_filename || resume.title : template.name || resume.template_name || resume.title;
-  const previewHeadline = isUpload ? "CV upload" : structured.headline || structured.current_title || structured.full_name || resume.title;
+  const previewHeadline = isUpload ? "CV tải lên" : structured.headline || structured.current_title || structured.full_name || resume.title;
   const previewSummary = isUpload
-    ? (resume.raw_text ? `${resume.raw_text.slice(0, 120)}${resume.raw_text.length > 120 ? "..." : ""}` : "File PDF, DOC hoặc DOCX đã upload")
+    ? "File gốc đã tải lên. Bạn có thể xem hoặc tải lại đúng file này."
     : structured.summary || "CV tạo từ mẫu với dữ liệu thật từ hồ sơ ứng viên.";
 
   return (
@@ -50,12 +59,20 @@ export default function ResumeCard({ resume, active, onPreview, onEdit, onDownlo
       <div className={isUpload ? "rw-cv-card-preview rw-cv-card-preview--upload" : `rw-cv-card-preview rw-cv-card-preview--manual rw-cv-card-preview--${variant}`}>
         {isUpload ? (
           <>
-            <div className="rw-cv-card-upload-icon">
-              <span>PDF</span>
+            <div className="rw-cv-card-upload-top">
+              <div className="rw-cv-card-upload-icon">
+                <span>{fileType}</span>
+              </div>
+              <div className="rw-cv-card-preview-copy">
+                <span className="rw-cv-card-preview-kicker">File CV gốc</span>
+                <strong>{previewName}</strong>
+                <p>{previewSummary}</p>
+              </div>
             </div>
-            <div className="rw-cv-card-preview-copy">
-              <strong>{previewName}</strong>
-              <p>{previewSummary}</p>
+            <div className="rw-cv-card-upload-meta">
+              <span>{fileType}</span>
+              <span>{formatDate(resume.updated_at)}</span>
+              <span>{resume.is_primary ? "CV chính" : "Đã lưu"}</span>
             </div>
           </>
         ) : (
@@ -78,7 +95,7 @@ export default function ResumeCard({ resume, active, onPreview, onEdit, onDownlo
         )}
 
         <div className="rw-cv-card-preview-badge-row">
-          <span className="rw-badge rw-badge-white">{isUpload ? "Upload" : "Tạo từ mẫu"}</span>
+          <span className="rw-badge rw-badge-white">{isUpload ? "Tải lên" : "Tạo từ mẫu"}</span>
           {!isUpload ? <span className={`rw-badge rw-cv-variant-badge rw-cv-variant-badge--${variant}`}>{variant.toUpperCase()}</span> : null}
           {resume.is_primary ? <span className="rw-badge rw-badge-blue">CV chính</span> : null}
         </div>
@@ -88,7 +105,7 @@ export default function ResumeCard({ resume, active, onPreview, onEdit, onDownlo
         <div className="rw-cv-card-head">
           <div>
             <h4>{resume.title}</h4>
-            <p>{template.name || resume.template_name || (isUpload ? resume.original_filename : "Chưa chọn template")}</p>
+            <p>{template.name || resume.template_name || (isUpload ? resume.original_filename : "Chưa chọn mẫu CV")}</p>
           </div>
           <div className="rw-cv-card-head-meta">
             <span className={resume.is_primary ? "rw-badge rw-badge-blue" : "rw-badge rw-badge-slate"}>
@@ -99,21 +116,26 @@ export default function ResumeCard({ resume, active, onPreview, onEdit, onDownlo
         </div>
 
         <div className="rw-cv-card-meta">
-          <span>{isUpload ? "Upload PDF" : "Tạo từ mẫu"}</span>
+          <span>{isUpload ? "File tải lên" : "Tạo từ mẫu"}</span>
           <span>{resume.file_ext || (isUpload ? ".pdf" : "pdf")}</span>
-          <span>{tags.length ? tags.join(" · ") : "Chưa gán tag"}</span>
+          <span>{tags.length ? tags.join(" · ") : "Chưa chọn kỹ năng"}</span>
         </div>
 
         <div className="rw-cv-card-actions">
           <button type="button" className="rw-btn-outline-lg rw-btn-outline-lg--ghost" onClick={() => onPreview?.(resume)}>
-            Xem
+            {isUpload ? "Xem file" : "Xem"}
           </button>
           <button type="button" className="rw-btn-outline-lg rw-btn-outline-lg--ghost" onClick={() => onEdit?.(resume)}>
             Sửa
           </button>
           <button type="button" className="rw-btn-outline-lg rw-btn-outline-lg--ghost" onClick={() => onDownload?.(resume)}>
-            Tải PDF
+            {isUpload ? "Tải file" : "Tải PDF"}
           </button>
+          {isUpload && (
+            <button type="button" className="rw-btn-outline-lg" onClick={() => onConvertToTemplate?.(resume)}>
+              Tạo CV theo mẫu
+            </button>
+          )}
           {!resume.is_primary ? (
             <button type="button" className="rw-btn-outline-lg" onClick={() => onSetPrimary?.(resume)}>
               Đặt làm CV chính

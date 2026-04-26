@@ -11,8 +11,7 @@ export default function EmployerSearchHero({ query, onQueryChange, quickFilters,
             Khám phá nhà tuyển dụng phù hợp với bạn
           </h1>
           <p style={{ marginTop: "0.75rem", maxWidth: "42rem", fontSize: "0.875rem", lineHeight: "1.75rem", color: "#475569" }}>
-            Tìm kiếm công ty theo ngành nghề, địa điểm và mức độ phù hợp với hồ sơ của bạn. Dữ liệu ưu tiên lấy từ hệ thống hiện có,
-            sau đó làm giàu bằng gợi ý để ứng viên scan nhanh hơn.
+            Tìm kiếm công ty theo ngành nghề, địa điểm và số vị trí đang tuyển. Dữ liệu được lấy từ hồ sơ công ty và tin tuyển dụng đang mở.
           </p>
 
           <div className="rw-search-wrap">
@@ -21,7 +20,7 @@ export default function EmployerSearchHero({ query, onQueryChange, quickFilters,
               <input
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
-                placeholder="Tìm theo tên công ty, ngành nghề, công nghệ hoặc địa điểm"
+                placeholder="Tìm theo tên công ty, ngành nghề hoặc địa điểm"
                 className="rw-input-search"
               />
             </div>
@@ -38,15 +37,15 @@ export default function EmployerSearchHero({ query, onQueryChange, quickFilters,
             <p className="rw-hero-stat-eyebrow">Tổng quan nhanh</p>
             <div className="rw-hero-stat-grid">
               <Metric label="Công ty" value={String(totalCompanies).padStart(2, "0")} />
-              <Metric label="Đề xuất cao" value="06" />
-              <Metric label="Remote" value="12" />
-              <Metric label="Top fit" value="94%" />
+              <Metric label="Đang tuyển" value="Nhiều" />
+              <Metric label="Remote" value="Có" />
+              <Metric label="Theo dõi" value="Lưu lại" />
             </div>
           </div>
           <div className="rw-hero-tip-card">
             <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#0f172a" }}>Mẹo khám phá</p>
             <p style={{ marginTop: "0.5rem", fontSize: "0.875rem", lineHeight: "1.5rem", color: "#475569" }}>
-              Ưu tiên mở các công ty có độ phù hợp cao trước, sau đó lọc thêm theo địa điểm hoặc cấp độ tuyển dụng để danh sách gọn hơn.
+              Bắt đầu bằng tên công ty hoặc ngành nghề, sau đó mở danh sách việc làm để xem các vị trí phù hợp.
             </p>
           </div>
         </aside>

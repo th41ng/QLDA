@@ -4,9 +4,11 @@
   jobs: "/jobs",
   jobDetail: (id = ":id") => `/jobs/${id}`,
   candidate: {
+    root: "/candidate",
     profile: "/candidate/profile",
     resumes: "/candidate/resumes",
     resumeCreate: "/candidate/resumes/create",
+    parseCV: "/candidate/resumes/parse",
     templates: "/candidate/templates",
     applications: "/candidate/applications",
     employers: "/candidate/employers",
@@ -65,13 +67,13 @@ export const FOOTER_LINKS = {
     { label: "Đăng tin tuyển dụng", to: authRoute("register", "recruiter") },
   ],
   support: [
-    { label: "FAQ", to: ROUTES.jobs },
-    { label: "Hướng dẫn dùng", to: ROUTES.auth },
-    { label: "Chính sách", to: ROUTES.home },
+    { label: "FAQ", to: "#" },
+    { label: "Hướng dẫn dùng", to: "#" },
+    { label: "Chính sách", to: "#" },
   ],
   contact: [
-    { label: "Email: myappweb145@gmail.com", to: "mailto:support@jobportal.vn" },
-    { label: "Hotline: 1900 1234", to: "tel:19001234" },
+    { label: "Email: myappweb145@gmail.com", to: null },
+    { label: "Hotline: 1900 1234", to: null },
   ],
 };
 

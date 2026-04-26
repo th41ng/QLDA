@@ -207,7 +207,9 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
 
   const handleTab = (tab) => {
     setActiveTab(tab);
-    navigate(tab === "list" ? ROUTES.candidate.resumes : ROUTES.candidate.resumeCreate);
+    if (tab === "list") navigate(ROUTES.candidate.resumes);
+    else if (tab === "parse") navigate(ROUTES.candidate.parseCV);
+    else navigate(ROUTES.candidate.resumeCreate);
   };
 
   const handleSelectTemplate = (template) => {
@@ -333,7 +335,7 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
         setMessage("Đã cập nhật CV.");
       } else if (template?.id || template?.slug) {
         await api.resumes.createFromTemplate(payload);
-        setMessage("Đã tạo CV từ template.");
+        setMessage("Đã tạo CV từ mẫu đã chọn.");
       } else {
         await api.resumes.createManual(payload);
         setMessage("Đã tạo CV mới.");
@@ -356,9 +358,9 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
       <section className="landing-section candidate-cv-hero candidate-cv-hero--create">
         <div className="candidate-cv-hero-copy">
           <span className="eyebrow">Tạo CV</span>
-          <h1 className="rw-heading-xl">Chọn template → điền form → tạo CV</h1>
+          <h1 className="rw-heading-xl">Chọn mẫu → điền thông tin → tạo CV</h1>
           <p className="lead">
-            Flow tách riêng dành cho ứng viên: chọn một mẫu thật từ database, hoàn thiện dữ liệu cơ bản và tạo CV ngay trong cùng một màn.
+            Chọn mẫu CV phù hợp, hoàn thiện thông tin và xem trước CV trước khi lưu.
           </p>
         </div>
 
@@ -376,8 +378,8 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
 
       <div className="candidate-create-steps">
         {[
-          { id: 1, label: "Chọn template" },
-          { id: 2, label: "Điền form" },
+          { id: 1, label: "Chọn mẫu" },
+          { id: 2, label: "Điền thông tin" },
           { id: 3, label: "Tạo CV" },
         ].map((item) => (
           <div key={item.id} className={step >= item.id ? "candidate-create-step candidate-create-step--active" : "candidate-create-step"}>
@@ -394,16 +396,16 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
           <section className="rw-card">
             <div className="rw-flex-between candidate-create-section-head">
               <div>
-                <h2 className="rw-heading-2xl">Bước 1. Chọn template</h2>
-                <p className="rw-muted-sm">Các mẫu bên dưới lấy trực tiếp từ bảng <code>cv_templates</code>.</p>
+                <h2 className="rw-heading-2xl">Bước 1. Chọn mẫu CV</h2>
+                <p className="rw-muted-sm">Chọn một mẫu CV phù hợp với vị trí bạn muốn ứng tuyển.</p>
               </div>
               <span className="rw-badge rw-badge-slate">{templates.length} mẫu</span>
             </div>
 
             {loading ? (
               <div className="rw-state-default">
-                <h3>Đang tải template...</h3>
-                <p>Hệ thống đang lấy các mẫu thật từ database để dựng gallery chọn template.</p>
+                <h3>Đang tải mẫu CV...</h3>
+                <p>Hệ thống đang chuẩn bị các mẫu CV để bạn lựa chọn.</p>
               </div>
             ) : (
               <ResumeTemplateGrid
@@ -419,7 +421,7 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
               <div>
                 <span className="eyebrow">Mẫu đã chọn</span>
                 <h2 className="rw-heading-2xl">{selectedTemplate?.name || form.template_name || "Mẫu CV"}</h2>
-                <p className="rw-muted-sm">{selectedTemplate?.summary || selectedTemplate?.description || "Template này sẽ được dùng để tạo CV realtime."}</p>
+                <p className="rw-muted-sm">{selectedTemplate?.summary || selectedTemplate?.description || "Mẫu này sẽ được dùng để tạo CV của bạn."}</p>
               </div>
               <div className="candidate-create-selected-actions">
                 <button
@@ -447,8 +449,8 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
             </section>
           ) : (
             <section className="rw-card rw-state-empty">
-              <h3>Chọn một template để mở form</h3>
-              <p>Form sẽ được khóa theo template bạn chọn để giữ flow thật gọn và dễ theo dõi.</p>
+              <h3>Chọn một mẫu CV để bắt đầu</h3>
+              <p>Sau khi chọn mẫu, bạn có thể điền thông tin và xem trước CV ngay.</p>
             </section>
           )}
         </div>
@@ -462,7 +464,7 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
             <div className="rw-modal-head">
               <div>
                 <p className="rw-modal-kicker">Bước 2 + Bước 3</p>
-                <h3 className="rw-heading-2xl">Chỉnh sửa và xem trước trong cùng một modal</h3>
+                <h3 className="rw-heading-2xl">Chỉnh sửa và xem trước CV</h3>
                 <p className="rw-modal-subtitle">Mẫu: {selectedTemplate?.name || form.template_name || "Chưa chọn"}</p>
               </div>
               <button type="button" className="rw-btn-close" onClick={() => setEditorModalOpen(false)}>
@@ -491,10 +493,10 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
               <section className="candidate-editor-preview-pane" id="cv-live-preview">
                 <div className="rw-flex-between candidate-create-section-head">
                   <div>
-                    <h2 className="rw-heading-2xl">Xem trước CV thật</h2>
-                    <p className="rw-muted-sm">Nội dung thay đổi realtime theo form bên trái.</p>
+                    <h2 className="rw-heading-2xl">Xem trước CV</h2>
+                    <p className="rw-muted-sm">Nội dung thay đổi theo thông tin bạn nhập bên trái.</p>
                   </div>
-                  <span className="rw-badge rw-badge-green">Live CV</span>
+                  <span className="rw-badge rw-badge-green">Bản xem trước</span>
                 </div>
 
                 <div className="candidate-create-preview-frame">
@@ -503,7 +505,7 @@ export default function ResumeBuilderPage({ defaultTab = "create" }) {
                       <LiveTemplate data={form} />
                     </div>
                   ) : (
-                    <div className="rw-empty-dashed">Chưa chọn template nên chưa có preview CV.</div>
+                    <div className="rw-empty-dashed">Chưa chọn mẫu CV nên chưa có bản xem trước.</div>
                   )}
                 </div>
 

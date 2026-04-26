@@ -11,6 +11,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS match_scores;
 DROP TABLE IF EXISTS otp_codes;
 DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS candidate_company_follows;
 DROP TABLE IF EXISTS applications;
 DROP TABLE IF EXISTS resume_tags;
 DROP TABLE IF EXISTS job_tags;
@@ -56,6 +57,16 @@ CREATE TABLE companies (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_companies_user FOREIGN KEY (recruiter_user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE candidate_company_follows (
+  candidate_user_id INT NOT NULL,
+  company_id INT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (candidate_user_id, company_id),
+  INDEX idx_candidate_company_follows_company (company_id),
+  CONSTRAINT fk_candidate_company_follows_candidate FOREIGN KEY (candidate_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_candidate_company_follows_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE candidate_profiles (

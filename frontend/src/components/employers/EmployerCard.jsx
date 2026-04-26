@@ -4,13 +4,12 @@ import { ROUTES } from "../../routes";
 export default function EmployerCard({ company, followed, onToggleFollow, onViewCompany }) {
   const logo = company.logo_url || company.logo || null;
   const name = company.company_name || company.name || "Nhà tuyển dụng";
-  const rating = Number(company.rating || 4.5).toFixed(1);
-  const matchScore = company.match_score || 80;
+  const openingCount = Number(company.openings || 0);
+  const activeJobsCount = Number(company.active_jobs_count || 0);
+  const locationText = Array.isArray(company.locations) && company.locations.length ? company.locations.slice(0, 2).join(", ") : company.location || company.address;
   const tags = Array.isArray(company.tags) ? company.tags.slice(0, 4) : [];
   const highlights = Array.isArray(company.hiring_focus) ? company.hiring_focus.slice(0, 2) : [];
-  const viewCompanyProps = company.website
-    ? { as: "a", href: company.website, target: "_blank", rel: "noreferrer" }
-    : { as: Link, to: ROUTES.jobs };
+  const jobSearchUrl = `${ROUTES.jobs}?q=${encodeURIComponent(name)}`;
 
   return (
     <article className="rw-employer-card landing-employer-card panel-tile">
@@ -27,65 +26,50 @@ export default function EmployerCard({ company, followed, onToggleFollow, onView
             <p style={{ marginTop: "0.25rem", fontSize: "0.875rem", color: "#475569" }}>{company.industry || "Đang tuyển dụng"}</p>
           </div>
         </div>
-        <span className="rw-badge rw-badge-green">{matchScore}% fit</span>
+        <span className="rw-badge rw-badge-green">{openingCount} vị trí</span>
       </div>
 
       <div className="rw-meta-grid">
-        <Info label="Địa điểm" value={company.location || company.address || "Chưa cập nhật"} />
-        <Info label="Quy mô" value={company.size || "50-100 nhân sự"} />
-        <Info label="Đánh giá" value={`★ ${rating}/5`} />
-        <Info label="Đang tuyển" value={`${company.openings ?? 0} vị trí`} />
+        <Info label="Địa điểm" value={locationText || "Chưa cập nhật"} />
+        <Info label="Tin tuyển" value={`${activeJobsCount} tin`} />
+        <Info label="Ngành" value={company.industry || "Chưa cập nhật"} />
+        <Info label="Số lượng" value={`${openingCount} vị trí`} />
       </div>
 
-      {company.summary ? <p style={{ fontSize: "0.875rem", lineHeight: "1.5rem", color: "#475569" }}>{company.summary}</p> : null}
+      <p style={{ fontSize: "0.875rem", lineHeight: "1.5rem", color: "#475569", margin: 0 }}>
+        {company.summary || company.description || "Công ty đang cập nhật thông tin giới thiệu. Bạn có thể xem các vị trí đang tuyển hoặc mở thông tin công ty để kiểm tra thêm."}
+      </p>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-        {tags.map((tag) => (
-          <span key={tag} className="rw-employer-tag">{tag}</span>
-        ))}
-        {highlights.map((tag) => (
-          <span key={tag} className="rw-employer-tag-blue">{tag}</span>
-        ))}
-      </div>
+      {(tags.length || highlights.length) ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+          {tags.map((tag) => (
+            <span key={tag} className="rw-employer-tag">{tag}</span>
+          ))}
+          {highlights.map((tag) => (
+            <span key={tag} className="rw-employer-tag-blue">{tag}</span>
+          ))}
+        </div>
+      ) : null}
 
       <div className="rw-employer-card-foot">
-        <span className="rw-badge rw-badge-blue">{company.openings ?? 0} việc mở</span>
+        <span className="rw-badge rw-badge-blue">{openingCount} việc đang tuyển</span>
         <div className="rw-employer-card-actions">
-          <Link className="btn" style={{ borderRadius: "0.75rem", padding: "0.5rem 1rem", fontSize: "0.875rem" }} to={ROUTES.jobs} onClick={() => onViewCompany(company)}>
+          <Link className="btn" style={{ borderRadius: "0.75rem", padding: "0.5rem 1rem", fontSize: "0.875rem" }} to={jobSearchUrl}>
             Xem việc làm
           </Link>
-          <EmployerLink viewCompanyProps={viewCompanyProps} onClick={() => onViewCompany(company)} />
+          <button type="button" className="rw-employer-link" onClick={() => onViewCompany(company)}>
+            Xem công ty
+          </button>
           <button
             type="button"
             onClick={() => onToggleFollow(company.id)}
             className={followed ? "rw-btn-follow rw-btn-follow--active" : "rw-btn-follow"}
           >
-            {followed ? "Đang theo dõi" : "Theo dõi"}
+            {followed ? "Đã lưu" : "Lưu công ty"}
           </button>
         </div>
       </div>
     </article>
-  );
-}
-
-function EmployerLink({ viewCompanyProps, onClick }) {
-  if (viewCompanyProps.as === "a") {
-    return (
-      <a
-        className="rw-employer-link"
-        href={viewCompanyProps.href}
-        target={viewCompanyProps.target}
-        rel={viewCompanyProps.rel}
-        onClick={onClick}
-      >
-        Xem công ty
-      </a>
-    );
-  }
-  return (
-    <Link className="rw-employer-link" to={viewCompanyProps.to} onClick={onClick}>
-      Xem công ty
-    </Link>
   );
 }
 
@@ -99,7 +83,7 @@ function Info({ label, value }) {
 }
 
 function getInitials(name) {
-  return String(name || "JT")
+  return String(name || "NTD")
     .trim()
     .split(/\s+/)
     .slice(0, 2)

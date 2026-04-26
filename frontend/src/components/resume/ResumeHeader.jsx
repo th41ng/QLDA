@@ -14,7 +14,7 @@ export default function ResumeHeader({ onCreate, onUpload }) {
     <section className="rw-resume-header landing-section panel">
       <div className="rw-resume-header-layout">
         <div className="rw-hero-text">
-          <span className="eyebrow">Resume Workspace</span>
+          <span className="eyebrow">Khu vực CV</span>
           <h1 className="rw-heading-xl">CV của bạn</h1>
           <p style={{ marginTop: "0.75rem", fontSize: "0.875rem", lineHeight: "1.75rem", color: "#475569" }}>
             Tạo mới, tải lên và quản lý tất cả CV ở một nơi. Tập trung vào thao tác nhanh, dễ xem lại và sẵn sàng dùng khi ứng tuyển.
@@ -41,7 +41,7 @@ export default function ResumeHeader({ onCreate, onUpload }) {
               uploadRef.current?.click();
             }}
           >
-            Upload CV
+            Tải lên CV
           </button>
           <input ref={uploadRef} type="file" accept=".pdf,.doc,.docx" style={{ display: "none" }} onChange={(event) => onUpload?.(event.target.files?.[0] || null)} />
         </div>

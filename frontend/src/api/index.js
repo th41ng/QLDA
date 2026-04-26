@@ -1,4 +1,4 @@
-import { apiRequest } from "../lib/api";
+import { apiDownload, apiRequest } from "../lib/api";
 
 export const api = {
   auth: {
@@ -80,6 +80,8 @@ export const api = {
         body: JSON.stringify(payload),
       }),
     upload: (formData) => apiRequest("/resumes/upload", { method: "POST", body: formData }),
+    parsePreview: (formData) => apiRequest("/resumes/parse-preview", { method: "POST", body: formData }),
+    parseAndCreate: (formData) => apiRequest("/resumes/parse-and-create", { method: "POST", body: formData }),
     update: (id, payload) =>
       apiRequest(`/resumes/${id}`, {
         method: "PUT",
@@ -94,6 +96,12 @@ export const api = {
     getProfile: () => apiRequest("/profiles/me"),
     exportUrl: (resumeId, format = "pdf") =>
       `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001/api"}/resumes/${resumeId}/export?format=${format}`,
+    exportFile: (resumeId, format = "pdf", filename = `resume-${resumeId}.${format}`) =>
+      apiDownload(`/resumes/${resumeId}/export?format=${format}`, {
+        filename,
+      }),
+    originalFileUrl: (resumeId) =>
+      `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001/api"}/resumes/${resumeId}/export?format=original`,
     recommendations: () => apiRequest("/resumes/recommendations"),
     preview: (payload) =>
     apiRequest("/resumes/preview", {
@@ -109,6 +117,9 @@ export const api = {
   },
   companies: {
     me: () => apiRequest("/companies/me"),
+    followed: () => apiRequest("/companies/follows"),
+    follow: (companyId) => apiRequest(`/companies/${companyId}/follow`, { method: "PUT" }),
+    unfollow: (companyId) => apiRequest(`/companies/${companyId}/follow`, { method: "DELETE" }),
     featured: ({ q = "", page = 1, perPage = 6 } = {}) => {
       const params = new URLSearchParams();
       if (q) params.set("q", q);

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { api } from "../api";
 import LandingJobCard from "../components/landing/LandingJobCard";
 import { Skeleton, SkeletonJobCard } from "../components/Skeleton";
@@ -28,10 +29,12 @@ const DEFAULT_FILTERS = {
 
 export default function JobsPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  const initialQuery = useMemo(() => new URLSearchParams(location.search).get("q") || "", [location.search]);
   const [jobs, setJobs] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState({ ...DEFAULT_FILTERS, q: initialQuery });
   const [page, setPage] = useState(1);
   const [recommendations, setRecommendations] = useState([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
@@ -64,6 +67,13 @@ export default function JobsPage() {
   useEffect(() => {
     setPage(1);
   }, [filters]);
+
+  useEffect(() => {
+    setFilters((current) => {
+      if (current.q === initialQuery) return current;
+      return { ...current, q: initialQuery };
+    });
+  }, [initialQuery]);
 
   useEffect(() => {
     if (user?.role !== "candidate") {
@@ -269,7 +279,7 @@ export default function JobsPage() {
           </article>
           <article>
             <strong>{loading ? <Skeleton className="skeleton-line" width="72px" height="20px" /> : tagOptions.length}</strong>
-            <span>Tag nổi bật</span>
+            <span>Kỹ năng nổi bật</span>
           </article>
         </div>
       </section>
@@ -359,7 +369,7 @@ export default function JobsPage() {
           </div>
 
           <div className="jobs-filter-section">
-            <h3>Tag nổi bật</h3>
+            <h3>Kỹ năng nổi bật</h3>
             <div className="jobs-tag-list">
               {tagOptions.map((tag) => (
                 <button
@@ -385,8 +395,8 @@ export default function JobsPage() {
                   <h2>{recommendationMode === "suitable" ? "Việc làm phù hợp với CV của bạn" : "Việc làm nên tham khảo thêm"}</h2>
                   <p>
                     {recommendationMode === "suitable"
-                      ? "Gợi ý này được chấm từ tag kỹ năng, địa điểm mong muốn, kinh nghiệm và phần nội dung CV đã được làm sạch."
-                      : `Những tin dưới đây chưa đạt ngưỡng ${MIN_SUITABLE_MATCH_SCORE} điểm để gắn nhãn phù hợp, nên chỉ được hiển thị như danh sách tham khảo.`}
+                      ? "Gợi ý này dựa trên kỹ năng, địa điểm mong muốn, kinh nghiệm và nội dung CV của bạn."
+                      : "Những tin dưới đây có một số điểm tương đồng với CV của bạn và có thể dùng để tham khảo thêm."}
                   </p>
                 </div>
                 <Link className="btn btn-ghost btn-small" to={ROUTES.candidate.resumes}>
@@ -437,7 +447,7 @@ export default function JobsPage() {
                       <p className="jobs-recommendation-summary">
                         {job.summary || (job.recommendation_label === "suitable"
                           ? "Công việc này có nhiều tín hiệu trùng với thông tin hồ sơ và CV bạn đã lưu."
-                          : "Tin này có một số tín hiệu trùng với CV, nhưng chưa đạt ngưỡng để xem là phù hợp cao.")}
+                          : "Tin này có một số điểm tương đồng với CV, bạn có thể xem thêm trước khi quyết định ứng tuyển.")}
                       </p>
 
                       <div className="jobs-match-breakdown">
@@ -492,8 +502,8 @@ export default function JobsPage() {
                 </div>
               ) : (
                 <div className="jobs-recommendation-empty">
-                  <h3>Chưa có đủ dữ liệu để gợi ý việc làm.</h3>
-                  <p>Bạn chưa có CV nào, nên hệ thống chưa thể đề xuất công việc phù hợp với hồ sơ của bạn.</p>
+                  <h3>Chưa có đủ thông tin để gợi ý việc làm.</h3>
+                  <p>Bạn chưa có CV nào. Hãy tạo hoặc tải CV lên để nhận gợi ý sát hơn với hồ sơ của bạn.</p>
                   <div className="jobs-recommendation-actions">
                     <Link className="btn btn-small" to={ROUTES.candidate.resumes}>
                       Tạo CV ngay
@@ -602,18 +612,18 @@ function formatBetterMetricDetail(key, detail) {
   if (!detail) return null;
   if (key === "text") {
     const skillTerms = (detail.matched_skill_terms || []).slice(0, 6);
-    return skillTerms.length ? `Kỹ năng tự do hỗ trợ: ${skillTerms.join(", ")}` : "Chưa có cụm từ nội dung sạch nào đủ mạnh để hiển thị.";
+    return skillTerms.length ? `Kỹ năng tìm thấy trong CV: ${skillTerms.join(", ")}` : "Chưa tìm thấy kỹ năng nổi bật trong nội dung CV.";
   }
   if (key === "tags") {
     const tags = detail.matched_tags || [];
     const skillsText = String(detail.skills_text || "").trim();
     if (tags.length && skillsText) {
-      return `Tag kỹ năng trùng: ${tags.join(", ")}\nKỹ năng tự do đã khai báo: ${skillsText}`;
+      return `Kỹ năng liên quan trùng: ${tags.join(", ")}\nKỹ năng hiển thị trên CV: ${skillsText}`;
     }
     if (tags.length) {
-      return `Tag kỹ năng trùng: ${tags.join(", ")}`;
+      return `Kỹ năng liên quan trùng: ${tags.join(", ")}`;
     }
-    return skillsText ? `Chưa có tag trùng. Kỹ năng tự do đã khai báo: ${skillsText}` : "Chưa có tag kỹ năng nào trùng.";
+    return skillsText ? `Chưa có kỹ năng liên quan trùng. Kỹ năng hiển thị trên CV: ${skillsText}` : "Chưa có kỹ năng liên quan nào trùng.";
   }
   if (key === "location") {
     if (detail.is_remote) return "Công việc remote nên đạt điểm tối đa ở tiêu chí địa điểm.";
@@ -632,15 +642,15 @@ function formatBetterMetricDetail(key, detail) {
 function buildBetterMatchMetrics(breakdown) {
   const detail = breakdown?.detail || {};
   const hints = {
-    text: "Nội dung CV chỉ là tín hiệu hỗ trợ. Chỉ hiển thị cụm từ kỹ năng tự do đã được làm sạch, không hiển thị token thô.",
-    tags: "Tag kỹ năng là tín hiệu chính để chấm độ phù hợp. Càng nhiều tag trùng với job, điểm càng cao.",
-    location: "Địa điểm mong muốn trong CV có khớp với địa điểm làm việc hay không. Công việc remote luôn đạt điểm tối đa.",
-    experience: "So sánh số năm kinh nghiệm trong CV với mức kinh nghiệm tối thiểu của công việc.",
+    text: "Đối chiếu nội dung CV với mô tả công việc để tìm các kỹ năng và kinh nghiệm liên quan.",
+    tags: "Kỹ năng trong CV càng gần với yêu cầu công việc thì mức phù hợp càng cao.",
+    location: "Ưu tiên các công việc gần với khu vực bạn mong muốn. Công việc remote thường phù hợp với nhiều địa điểm hơn.",
+    experience: "So sánh số năm kinh nghiệm của bạn với yêu cầu trong tin tuyển dụng.",
   };
 
   return [
     { key: "text", label: "Nội dung CV", value: Number(breakdown?.text || 0), max: 35 },
-    { key: "tags", label: "Tag kỹ năng", value: Number(breakdown?.tags || 0), max: 45 },
+    { key: "tags", label: "Kỹ năng liên quan", value: Number(breakdown?.tags || 0), max: 45 },
     { key: "location", label: "Địa điểm", value: Number(breakdown?.location || 0), max: 10 },
     { key: "experience", label: "Kinh nghiệm", value: Number(breakdown?.experience || 0), max: 10 },
   ].map((metric) => ({
