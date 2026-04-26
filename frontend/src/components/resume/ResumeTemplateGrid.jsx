@@ -26,15 +26,15 @@ function getTemplateSkin(template) {
 
 function getSkinMeta(skin) {
   const meta = {
-    "modern-blue": { title: "Tech", cue: "2 cot" },
-    "ats-clean": { title: "ATS", cue: "text-first" },
-    "creative-minimal": { title: "Creative", cue: "portfolio" },
-    "product-designer": { title: "Design", cue: "case-study" },
-    "data-analyst": { title: "Data", cue: "metrics" },
-    "hr-executive": { title: "Executive", cue: "leadership" },
-    "marketing-pro": { title: "Marketing", cue: "campaign" },
-    "minimal-slate": { title: "Minimal", cue: "clean" },
-    generic: { title: "Template", cue: "flex" },
+    "modern-blue": { title: "Công nghệ", cue: "2 cột" },
+    "ats-clean": { title: "Gọn gàng", cue: "dễ đọc" },
+    "creative-minimal": { title: "Sáng tạo", cue: "hồ sơ cá nhân" },
+    "product-designer": { title: "Thiết kế", cue: "dự án" },
+    "data-analyst": { title: "Phân tích", cue: "số liệu" },
+    "hr-executive": { title: "Nhân sự", cue: "quản lý" },
+    "marketing-pro": { title: "Marketing", cue: "chiến dịch" },
+    "minimal-slate": { title: "Tối giản", cue: "sạch" },
+    generic: { title: "Mẫu CV", cue: "linh hoạt" },
   };
   return meta[skin] || meta.generic;
 }
@@ -80,7 +80,7 @@ function TemplateLivePreview({ template, skin }) {
   const previewData = buildPreviewData(template, skin);
 
   return (
-    <div className={`rw-template-live-preview rw-template-live-preview--${skin}`} aria-label={`Template preview ${template.name}`}>
+    <div className={`rw-template-live-preview rw-template-live-preview--${skin}`} aria-label={`Xem trước mẫu CV ${template.name}`}>
       <div className="rw-template-live-canvas">
         <TemplateComponent data={previewData} />
       </div>
@@ -99,9 +99,9 @@ export default function ResumeTemplateGrid({ templates, onUseTemplate, selectedS
     <section className="rw-card rw-template-grid-shell">
       <div className="rw-template-grid-head">
         <div>
-          <h3 className="rw-template-grid-title">Mẫu CV từ database</h3>
+          <h3 className="rw-template-grid-title">Mẫu CV có sẵn</h3>
           <p className="rw-template-grid-desc">
-            Chọn một mẫu từ bảng <code>cv_templates</code> để dựng CV realtime bằng React template.
+            Chọn một mẫu phù hợp, sau đó kiểm tra nội dung trong bản xem trước.
           </p>
         </div>
         <div className="rw-template-grid-note">
@@ -126,7 +126,7 @@ export default function ResumeTemplateGrid({ templates, onUseTemplate, selectedS
                   <TemplateLivePreview template={template} skin={skin} />
                   <div className="rw-template-thumb-overlay">
                     <div className="rw-template-thumb-badge">
-                      <span>{selected ? "Dang chon" : "Template React"}</span>
+                      <span>{selected ? "Đang chọn" : "Mẫu CV"}</span>
                     </div>
                     <span className={`rw-template-variant rw-template-variant--${variant}`}>{getVariantLabel(variant)}</span>
                   </div>
@@ -143,8 +143,8 @@ export default function ResumeTemplateGrid({ templates, onUseTemplate, selectedS
                   </div>
 
                   <div className="rw-template-meta">
-                    <span className="rw-badge rw-badge-white">{template.slug || "template"}</span>
-                    <span className="rw-template-meta-link">Live preview {getVariantLabel(variant)}</span>
+                    <span className="rw-badge rw-badge-white">Mẫu {getVariantLabel(variant)}</span>
+                    <span className="rw-template-meta-link">Xem trước {getVariantLabel(variant)}</span>
                   </div>
 
                   <div className="rw-template-actions">
@@ -164,7 +164,7 @@ export default function ResumeTemplateGrid({ templates, onUseTemplate, selectedS
       ) : (
         <div className="rw-state-empty">
           <h3>Chưa có mẫu CV nào</h3>
-          <p>Hiện tại chưa có dữ liệu trong bảng cv_templates.</p>
+          <p>Hiện tại chưa có mẫu CV nào để chọn.</p>
         </div>
       )}
     </section>

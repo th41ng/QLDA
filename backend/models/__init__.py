@@ -1,6 +1,7 @@
 from .base import job_tags
 from .application import Application
 from .category import Category
+from .candidate_company_follow import CandidateCompanyFollow
 from .candidate_profile import CandidateProfile
 from .category import Category
 from .company import Company
@@ -16,6 +17,7 @@ from .user import User
 __all__ = [
     "Application",
     "Category",
+    "CandidateCompanyFollow",
     "CandidateProfile",
     "Category",
     "Company",

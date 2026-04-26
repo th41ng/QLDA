@@ -2,6 +2,7 @@
   const tabs = [
     { id: "list", label: "CV của tôi" },
     { id: "create", label: "Tạo CV" },
+    { id: "parse", label: "Tạo từ file CV" },
   ];
 
   return (

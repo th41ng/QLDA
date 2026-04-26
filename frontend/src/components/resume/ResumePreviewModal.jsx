@@ -10,7 +10,7 @@ function getTemplateVariant(slugOrName) {
 export default function ResumePreviewModal({ resume, onClose, onDownload }) {
   const structured = resume.structured_json || {};
   const template = structured.template || {};
-  const sourceLabel = resume.source_type === "upload" ? "CV upload" : "Tạo từ mẫu";
+  const sourceLabel = resume.source_type === "upload" ? "CV tải lên" : "Tạo từ mẫu";
   const templateKey = template.slug || template.name || resume.template_name;
   const TemplateComponent = resolveTemplateComponent(templateKey);
   const variant = getTemplateVariant(templateKey);

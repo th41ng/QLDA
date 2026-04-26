@@ -129,7 +129,7 @@ export default function CandidateProfilePage() {
         <div>
           <span className="eyebrow">JOBPORTAL</span>
           <h1>Hồ sơ ứng viên</h1>
-          <p>Cập nhật thông tin hồ sơ, CV và trạng thái ứng tuyển trong cùng một dashboard.</p>
+          <p>Cập nhật thông tin hồ sơ, CV và trạng thái ứng tuyển trong cùng một nơi.</p>
         </div>
       </div>
 
@@ -222,7 +222,7 @@ export default function CandidateProfilePage() {
                     }
                   />
                   <ProfileField
-                    label="Headline"
+                    label="Tiêu đề nghề nghiệp"
                     input={
                       <input
                         value={profile.headline || ""}
@@ -241,7 +241,7 @@ export default function CandidateProfilePage() {
               >
                 <div className="candidate-form-grid">
                   <ProfileField
-                    label="Current title"
+                    label="Chức danh hiện tại"
                     input={
                       <input
                         value={profile.current_title || ""}
@@ -251,7 +251,7 @@ export default function CandidateProfilePage() {
                     }
                   />
                   <ProfileField
-                    label="Years exp"
+                    label="Số năm kinh nghiệm"
                     input={
                       <input
                         type="number"
@@ -269,7 +269,7 @@ export default function CandidateProfilePage() {
                     }
                   />
                   <ProfileField
-                    label="Expected salary"
+                    label="Mức lương mong muốn"
                     input={
                       <input
                         value={profile.expected_salary || ""}
@@ -279,7 +279,7 @@ export default function CandidateProfilePage() {
                     }
                   />
                   <ProfileField
-                    label="Desired location"
+                    label="Khu vực mong muốn"
                     input={
                       <input
                         value={profile.desired_location || ""}
@@ -298,7 +298,7 @@ export default function CandidateProfilePage() {
               >
                 <div className="candidate-form-stack">
                   <ProfileField
-                    label="Summary"
+                    label="Tóm tắt chuyên môn"
                     fullWidth
                     input={
                       <textarea
@@ -310,7 +310,7 @@ export default function CandidateProfilePage() {
                     }
                   />
                   <ProfileField
-                    label="Education"
+                    label="Học vấn"
                     fullWidth
                     input={
                       <textarea
@@ -322,7 +322,7 @@ export default function CandidateProfilePage() {
                     }
                   />
                   <ProfileField
-                    label="Experience"
+                    label="Kinh nghiệm"
                     fullWidth
                     input={
                       <textarea
@@ -360,7 +360,7 @@ export default function CandidateProfilePage() {
                 ) : primaryResume ? (
                   <div className="candidate-side-summary">
                     <strong>{primaryResume.title || "CV online"}</strong>
-                    <p>{primaryResume.template_name || primaryResume.source_type || "manual"}</p>
+                    <p>{primaryResume.template_name || labelResumeSource(primaryResume.source_type)}</p>
                     <div className="candidate-side-meta">
                       <span>{primaryResume.is_primary ? "CV mặc định" : "CV đã lưu"}</span>
                       <span>{primaryResume.updated_at ? formatDate(primaryResume.updated_at) : "Mới cập nhật"}</span>
@@ -418,7 +418,7 @@ export default function CandidateProfilePage() {
                 </div>
 
                 <div className="recruiter-security-actions">
-                  <button className="btn btn-small" type="button" onClick={() => window.alert("Chức năng đổi mật khẩu cần endpoint riêng.")}>
+                  <button className="btn btn-small" type="button" onClick={() => window.alert("Tính năng đổi mật khẩu đang được chuẩn bị.")}>
                     Đổi mật khẩu
                   </button>
                 </div>
@@ -468,6 +468,12 @@ function InfoChip({ label, value }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function labelResumeSource(value) {
+  if (value === "upload") return "CV tải lên";
+  if (value === "manual") return "CV đã tạo";
+  return "CV đã lưu";
 }
 
 function StatusBadge({ status }) {

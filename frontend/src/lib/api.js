@@ -74,6 +74,37 @@ export async function apiRequest(path, options = {}) {
   return parseResponse(response, options);  // ← Thêm options
 }
 
+export async function apiDownload(path, options = {}) {
+  const response = await fetch(buildUrl(path), {
+    ...options,
+    headers: buildHeaders(options.headers, options.body, options.auth !== false),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Không thể tải file (${response.status}).`);
+  }
+
+  return {
+    blob: await response.blob(),
+    filename: filenameFromContentDisposition(response.headers.get("content-disposition"), options.filename || "download"),
+  };
+}
+
+function filenameFromContentDisposition(headerValue, fallback) {
+  if (!headerValue) return fallback;
+  const utfMatch = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utfMatch?.[1]) {
+    try {
+      return decodeURIComponent(utfMatch[1]);
+    } catch {
+      return fallback;
+    }
+  }
+  const plainMatch = headerValue.match(/filename="?([^";]+)"?/i);
+  return plainMatch?.[1] || fallback;
+}
+
 export function setAuthSession(token, user) {
   if (token) {
     localStorage.setItem(TOKEN_KEY, token);

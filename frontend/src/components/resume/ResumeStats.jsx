@@ -5,7 +5,7 @@
 
   const cards = [
     { label: "CV đã tạo", value: manualCount, cls: "rw-stat-blue" },
-    { label: "CV đã upload", value: uploadCount, cls: "rw-stat-green" },
+    { label: "CV đã tải lên", value: uploadCount, cls: "rw-stat-green" },
     { label: "CV đang dùng ứng tuyển", value: primaryCount, cls: "rw-stat-violet" },
   ];
 
