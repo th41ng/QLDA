@@ -1,6 +1,7 @@
 """User management service with business logic and validation"""
 
 from ..core.security import hash_password, verify_password
+from ..core.extensions import db
 from ..repositories import users as users_repo
 
 
