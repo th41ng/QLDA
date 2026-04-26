@@ -5,6 +5,7 @@ import { ROUTES } from "../../routes";
 import {
   CURRENCY_OPTIONS,
   DEFAULT_JOB_FORM,
+  EDUCATION_OPTIONS,
   EMPLOYMENT_OPTIONS,
   EXPERIENCE_OPTIONS,
   WORKPLACE_OPTIONS,
@@ -496,6 +497,31 @@ export default function RecruiterJobEditorPage() {
                   <span className="word-count">~{Math.ceil(form.requirements.split(/\s+/).filter(w => w).length)} từ</span>
                   {errors.requirements && touched.requirements && <span className="field-error" id="requirements-error">{errors.requirements}</span>}
                 </div>
+              </Field>
+              <Field label="Phúc lợi" hint="Mỗi dòng một mục — VD: Thưởng hiệu suất, Bảo hiểm sức khoẻ, Laptop">
+                <textarea
+                  rows="5"
+                  value={form.benefits}
+                  onChange={(event) => updateField("benefits", event.target.value)}
+                  placeholder="Thưởng hiệu suất hàng quý
+Bảo hiểm sức khoẻ cao cấp
+Laptop + thiết bị công việc
+Lịch làm việc linh hoạt
+..."
+                />
+                <div className="field-meta">
+                  <span className="word-count">~{Math.ceil((form.benefits || "").split(/\n/).filter(l => l.trim()).length)} mục</span>
+                </div>
+              </Field>
+              <Field label="Yêu cầu học vấn">
+                <select
+                  value={form.education_level}
+                  onChange={(event) => updateField("education_level", event.target.value)}
+                >
+                  {EDUCATION_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
               </Field>
             </div>
           </EditorSection>

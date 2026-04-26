@@ -1,12 +1,14 @@
-﻿export default function ResumeForm({
+export default function ResumeForm({
   values,
   onChange,
+  onToggleSkillTag,
   onSaveDraft,
   onPreview,
   onSubmit,
   saving,
   editingTitle,
   templates = [],
+  skillTags = [],
   lockTemplate = false,
   submitLabel,
 }) {
@@ -95,12 +97,30 @@
       </section>
 
       <section className="rw-card rw-form-section-card">
-        <SectionTitle title="Nội dung CV" description="Nội dung này sẽ được đẩy lên PDF và có thể chỉnh sửa trước khi xuất file." />
+        <SectionTitle title="Nội dung CV" description="Tag kỹ năng được dùng để chấm chính, ô kỹ năng tự do chỉ dùng bổ trợ và hiển thị trên CV." />
         <Field label="Tóm tắt bản thân">
           <textarea rows="5" value={values.summary} onChange={(event) => onChange("summary", event.target.value)} placeholder="Giới thiệu ngắn về kinh nghiệm, thế mạnh và mục tiêu nghề nghiệp..." />
         </Field>
-        <Field label="Kỹ năng" full>
-          <input value={values.skills} onChange={(event) => onChange("skills", event.target.value)} placeholder="React, JavaScript, CSS, REST API" />
+        <Field label="Kỹ năng tự do" full>
+          <input value={values.skills} onChange={(event) => onChange("skills", event.target.value)} placeholder="ReactJS, JavaScript, CSS, REST API" />
+        </Field>
+        <Field label="Tag kỹ năng" full>
+          <div className="recruiter-tag-grid">
+            {skillTags.length ? skillTags.map((tag) => {
+              const active = (values.tag_ids || []).includes(tag.id);
+              return (
+                <button
+                  key={tag.id}
+                  type="button"
+                  className={active ? "recruiter-tag-chip recruiter-tag-chip--active" : "recruiter-tag-chip"}
+                  onClick={() => onToggleSkillTag?.(tag.id)}
+                >
+                  <strong>{tag.name}</strong>
+                  <span>{tag.category_name || "Kỹ năng"}</span>
+                </button>
+              );
+            }) : <span className="rw-label-sm">Chưa tải được tag kỹ năng.</span>}
+          </div>
         </Field>
         <Field label="Kinh nghiệm">
           <textarea rows="6" value={values.experience} onChange={(event) => onChange("experience", event.target.value)} placeholder="Frontend Developer | ABC Company | 2023-2025..." />

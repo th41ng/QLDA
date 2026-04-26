@@ -11,9 +11,18 @@ except Exception:  # pragma: no cover - optional dependency
 
 from ...models import JobPosting, MatchScore, Resume, Tag
 
+RESUME_TEXT_FIELDS = (
+    "headline",
+    "summary",
+    "experience",
+    "education",
+    "additional_info",
+    "current_title",
+)
+
 STOPWORDS = {
     "and", "or", "the", "of", "to", "in", "with", "a", "an", "for", "on", "at",
-    "và", "cho", "của", "với", "là", "from", "by", "job", "work",
+    "va", "cho", "cua", "voi", "la", "from", "by", "job", "work",
 }
 
 TERM_ALIASES = {
@@ -93,6 +102,15 @@ def warmup_embedding_model() -> dict:
         "model": model_name,
         "reason": "Model warmed up",
     }
+
+
+def _normalize_text(text: str) -> str:
+    value = str(text or "").lower()
+    value = value.replace("đ", "d").replace("Đ", "d")
+    value = value.replace("Ä‘", "d").replace("Ä", "d")
+    value = unicodedata.normalize("NFD", value)
+    value = "".join(char for char in value if unicodedata.category(char) != "Mn")
+    return unicodedata.normalize("NFC", value)
 
 
 def tokenize(text: str) -> list[str]:
@@ -322,25 +340,68 @@ def job_profile_text(job: JobPosting) -> str:
 def resume_profile_text(resume: Resume) -> str:
     tag_blob = " ".join(tag_text(tag) for tag in resume.tags)
     structured = resume.structured_json or {}
-    extra = " ".join(str(value) for value in structured.values())
+    content_fields = _resume_text_fields(structured)
+    skills_text = _skills_text(structured)
+    raw_text = ""
+    if (resume.source_type or "").lower() == "upload":
+        raw_text = (resume.raw_text or "").strip()
     return " ".join(
         filter(
             None,
             [
                 resume.title,
-                resume.raw_text,
-                extra,
+                raw_text,
+                *content_fields,
+                skills_text,
                 tag_blob,
             ],
         )
     )
 
 
+def _get_desired_location(resume: Resume) -> str:
+    desired = (resume.structured_json or {}).get("desired_location") or ""
+    if not desired:
+        profile = getattr(getattr(resume, "user", None), "candidate_profile", None)
+        if profile:
+            desired = profile.desired_location or ""
+    return desired.strip() if isinstance(desired, str) else ""
+
+
+def _get_years_experience(resume: Resume) -> int:
+    years = (resume.structured_json or {}).get("years_experience")
+    if years is None:
+        profile = getattr(getattr(resume, "user", None), "candidate_profile", None)
+        if profile and profile.years_experience:
+            return int(profile.years_experience)
+        return 0
+    try:
+        return int(years or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _location_score(resume: Resume, job: JobPosting) -> float:
+    if (job.workplace_type or "").lower() == "remote":
+        return 1.0
+    job_loc = (job.location or "").strip().lower()
+    desired = _get_desired_location(resume).lower()
+    if not job_loc or not desired:
+        return 0.0
+    if job_loc in desired or desired in job_loc:
+        return 1.0
+    job_words = set(tokenize(job_loc))
+    desired_words = set(tokenize(desired))
+    if job_words and desired_words and (job_words & desired_words):
+        return 1.0
+    return 0.0
+
+
 def score_resume_for_job(resume: Resume, job: JobPosting) -> dict:
     resume_tokens = Counter(tokenize(resume_profile_text(resume)))
     job_tokens = Counter(tokenize(job_profile_text(job)))
     if not resume_tokens or not job_tokens:
-        return {"score": 0, "breakdown": {"tags": 0, "text": 0, "location": 0, "experience": 0}}
+        return {"score": 0, "breakdown": {"tags": 0, "text": 0, "location": 0, "experience": 0, "detail": {}}}
 
     shared = set(resume_tokens) & set(job_tokens)
     coverage_score = sum(min(resume_tokens[t], job_tokens[t]) for t in shared) / max(sum(job_tokens.values()), 1)

@@ -9,21 +9,24 @@ function formatSalary(job) {
 }
 
 export default function LandingJobCard({ job }) {
+  const isNew = isNewJob(job?.created_at);
+
   return (
     <article className="landing-job-card">
       <div className="landing-job-head">
         <div>
-          <span className="company-pill">{job.company?.company_name || "Nhà tuyển dụng"}</span>
+          <div className="landing-job-company">
+            <span className="landing-job-company-logo" aria-hidden="true">
+              {job.company?.logo_url ? <img src={job.company.logo_url} alt="" /> : <span>{getCompanyInitial(job.company?.company_name)}</span>}
+            </span>
+            <span className="company-pill">{job.company?.company_name || "Nhà tuyển dụng"}</span>
+          </div>
           <h3>{job.title}</h3>
           <p className="landing-job-meta">
             {job.location} · {job.employment_type} · {job.experience_level}
           </p>
         </div>
-        {job.is_featured ? (
-          <span className="match-pill match-pill--featured">Nổi bật</span>
-        ) : (
-          <span className="tag tag--soft">Mới</span>
-        )}
+        {isNew ? <span className="tag tag--soft">Mới</span> : null}
       </div>
 
       <p className="landing-job-summary">{job.summary}</p>
@@ -52,4 +55,17 @@ export default function LandingJobCard({ job }) {
       </div>
     </article>
   );
+}
+
+function getCompanyInitial(name) {
+  const value = String(name || "NTD").trim();
+  return value.charAt(0).toUpperCase();
+}
+
+function isNewJob(createdAt) {
+  if (!createdAt) return false;
+  const createdTime = new Date(createdAt).getTime();
+  if (Number.isNaN(createdTime)) return false;
+  const ageMs = Date.now() - createdTime;
+  return ageMs >= 0 && ageMs < 3 * 24 * 60 * 60 * 1000;
 }

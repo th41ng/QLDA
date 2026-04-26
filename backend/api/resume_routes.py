@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from datetime import date, datetime
 
@@ -44,6 +43,7 @@ def _structured_resume_payload(data: dict, user, template: CvTemplate | None = N
         "education": data.get("education"),
         "experience": data.get("experience"),
         "skills": data.get("skills"),
+        "skills_text": data.get("skills_text") or data.get("skills"),
         "additional_info": data.get("additional_info"),
         "template": {
             "id": template.id if template else data.get("template_id"),
@@ -52,6 +52,33 @@ def _structured_resume_payload(data: dict, user, template: CvTemplate | None = N
             "preview_url": template.preview_url if template else data.get("template_preview_url"),
         },
     }
+
+
+def _manual_resume_raw_text(structured: dict | None) -> str:
+    structured = structured or {}
+    skills_text = structured.get("skills_text")
+    if skills_text in (None, ""):
+        skills_text = structured.get("skills")
+    parts = []
+    for field in ["headline", "summary"]:
+        value = structured.get(field)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            parts.append(text)
+    if skills_text is not None:
+        text = str(skills_text).strip()
+        if text:
+            parts.append(text)
+    for field in ["experience", "education", "additional_info", "current_title"]:
+        value = structured.get(field)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            parts.append(text)
+    return "\n\n".join(parts)
 
 
 def _sync_candidate_profile(user, data: dict, structured: dict | None = None):
@@ -163,7 +190,7 @@ def create_manual_resume():
         title=data.get("title") or f"CV của {user.full_name}",
         source_type="manual",
         template_name=data.get("template_name") or data.get("template_slug"),
-        raw_text=json.dumps(data, ensure_ascii=False),
+        raw_text=_manual_resume_raw_text(structured_json),
         structured_json=structured_json,
         is_primary=bool(data.get("is_primary", False)),
     )
@@ -213,7 +240,7 @@ def create_resume_from_template():
         title=data.get("title") or f"{template.name} - {user.full_name}",
         source_type="manual",
         template_name=template.name,
-        raw_text=json.dumps(data, ensure_ascii=False),
+        raw_text=_manual_resume_raw_text(structured_json),
         structured_json=structured_json,
         is_primary=bool(data.get("is_primary", False)),
     )
@@ -299,10 +326,12 @@ def update_resume(resume_id):
     for field in ["title", "template_name"]:
         if field in data:
             setattr(resume, field, data[field])
-    if "raw_text" in data:
-        resume.raw_text = data["raw_text"]
     if "structured_json" in data:
         resume.structured_json = data["structured_json"]
+        if (resume.source_type or "").lower() == "manual":
+            resume.raw_text = _manual_resume_raw_text(resume.structured_json)
+    elif "raw_text" in data:
+        resume.raw_text = data["raw_text"]
     if "is_primary" in data and data["is_primary"]:
         Resume.query.filter_by(user_id=user.id, is_primary=True).update({"is_primary": False})
         resume.is_primary = True
