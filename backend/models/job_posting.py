@@ -16,6 +16,8 @@ class JobPosting(db.Model):
     description = db.Column(db.Text, nullable=False)
     requirements = db.Column(db.Text, nullable=False)
     responsibilities = db.Column(db.Text)
+    benefits = db.Column(db.Text)
+    education_level = db.Column(db.String(40), default="any")
     location = db.Column(db.String(120), nullable=False)
     workplace_type = db.Column(db.String(40), default="onsite")
     employment_type = db.Column(db.String(40), default="full-time")
