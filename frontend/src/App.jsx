@@ -10,6 +10,7 @@ import JobDetailPage from "./pages/JobDetailPage";
 import CandidateProfilePage from "./pages/candidate/ProfilePage";
 import CandidateResumesPage from "./pages/candidate/ResumesPage";
 import CandidateResumeBuilderPage from "./pages/candidate/ResumeBuilderPage";
+import ParseCVPage from "./pages/candidate/ParseCVPage";
 import CandidateTemplatesPage from "./pages/candidate/TemplatesPage";
 import CandidateApplicationsPage from "./pages/candidate/ApplicationsPage";
 import CandidateEmployersPage from "./pages/candidate/EmployersPage";
@@ -31,9 +32,11 @@ export default function App() {
         <Route path={ROUTES.auth} element={user ? <Navigate to={roleHome(user.role)} replace /> : <AuthPage />} />
         <Route path={ROUTES.jobs} element={<JobsPage />} />
         <Route path={ROUTES.jobDetail()} element={<JobDetailPage />} />
+        <Route path={ROUTES.candidate.root} element={<ProtectedRoute roles={["candidate"]}><Navigate to={ROUTES.candidate.profile} replace /></ProtectedRoute>} />
         <Route path={ROUTES.candidate.profile} element={<ProtectedRoute roles={["candidate"]}><CandidateProfilePage /></ProtectedRoute>} />
         <Route path={ROUTES.candidate.resumes} element={<ProtectedRoute roles={["candidate"]}><CandidateResumesPage /></ProtectedRoute>} />
         <Route path={ROUTES.candidate.resumeCreate} element={<ProtectedRoute roles={["candidate"]}><CandidateResumeBuilderPage /></ProtectedRoute>} />
+        <Route path={ROUTES.candidate.parseCV} element={<ProtectedRoute roles={["candidate"]}><ParseCVPage /></ProtectedRoute>} />
         <Route path={ROUTES.candidate.templates} element={<ProtectedRoute roles={["candidate"]}><CandidateTemplatesPage /></ProtectedRoute>} />
         <Route path={ROUTES.candidate.applications} element={<ProtectedRoute roles={["candidate"]}><CandidateApplicationsPage /></ProtectedRoute>} />
         <Route path={ROUTES.candidate.employers} element={<ProtectedRoute roles={["candidate"]}><CandidateEmployersPage /></ProtectedRoute>} />

@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import date, datetime
 
-from flask import Blueprint, current_app, request, send_file
+from flask import Blueprint, current_app, redirect, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import func
 
@@ -10,7 +10,7 @@ from ..core.extensions import db
 from ..models import CandidateProfile, CvTemplate, Resume, Tag
 from ..repositories import get_profile_by_user_id, get_resume_by_id, get_user_by_id, list_resumes_by_user_id
 from ..schemas import cv_template_to_dict, resume_to_dict
-from ..services.cv_service import (
+from ..core.services.cv_service import (
     allowed_resume_file,
     extract_text_from_upload,
     generate_docx_from_resume,
@@ -18,6 +18,7 @@ from ..services.cv_service import (
     save_uploaded_file,
 )
 from ..services.storage_service import upload_file
+from ..core.services.cv_parser_service import parse_cv_to_structured
 
 api_resumes_bp = Blueprint("api_resumes", __name__)
 
@@ -141,19 +142,8 @@ def _render_resume_files(resume: Resume):
     generate_pdf_from_resume(render_data, str(pdf_path))
     generate_docx_from_resume(render_data, str(docx_path))
 
-    uploaded_pdf = upload_file(
-        str(pdf_path),
-        folder="jobportal/resumes/generated",
-        public_id=f"resume-{resume.id}-pdf",
-    )
-    uploaded_docx = upload_file(
-        str(docx_path),
-        folder="jobportal/resumes/generated",
-        public_id=f"resume-{resume.id}-docx",
-    )
-
-    resume.generated_pdf_path = uploaded_pdf.url if uploaded_pdf else str(pdf_path)
-    resume.generated_docx_path = uploaded_docx.url if uploaded_docx else str(docx_path)
+    resume.generated_pdf_path = str(pdf_path)
+    resume.generated_docx_path = str(docx_path)
 
 
 def _try_render_resume_files(resume: Resume):
@@ -258,6 +248,147 @@ def create_resume_from_template():
     return json_ok(resume_to_dict(resume), "Resume created from template", 201)
 
 
+@api_resumes_bp.post("/parse-preview")
+@jwt_required()
+@role_required("candidate")
+def parse_cv_preview():
+    """
+    Parse CV file or existing resume and return structured data WITHOUT creating a resume.
+    Used by frontend to pre-fill the editor form before user confirms.
+    
+    Form data (either file or resume_id):
+    - file: PDF/DOC/DOCX file
+    - resume_id: ID of existing uploaded resume
+    """
+    user = _current_user()
+    extracted_text = None
+
+    resume_id = request.form.get("resume_id")
+    if resume_id:
+        existing_resume = Resume.query.filter_by(id=int(resume_id), user_id=user.id).first()
+        if not existing_resume:
+            return json_error("Resume not found.", 404)
+        extracted_text = existing_resume.raw_text or ""
+    else:
+        if "file" not in request.files:
+            return json_error("Resume file or resume_id is required.", 400)
+        file = request.files["file"]
+        if not file.filename:
+            return json_error("Resume file is required.", 400)
+        if not allowed_resume_file(file.filename):
+            return json_error("Only PDF, DOC and DOCX are supported.", 400)
+        _filename, stored_path, _mime = save_uploaded_file(file, current_app.config["UPLOAD_FOLDER"], f"resume-{user.id}")
+        extracted_text = extract_text_from_upload(stored_path)
+
+    if not (extracted_text or "").strip():
+        return json_error("Could not extract readable text from this resume file.", 422)
+
+    user_info = {
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone": user.phone,
+    }
+    parsed_data = parse_cv_to_structured(extracted_text, user_info)
+    return json_ok(parsed_data, "CV parsed successfully")
+
+
+@api_resumes_bp.post("/parse-and-create")
+@jwt_required()
+@role_required("candidate")
+def parse_cv_and_create_resume():
+    """
+    Parse CV and auto-fill resume template.
+    
+    Form data (either file or resume_id):
+    - file: PDF/DOC/DOCX file (for new upload)
+    - resume_id: ID of existing uploaded resume (for conversion)
+    - template_id: ID of resume template to use
+    - title: Optional resume title
+    - is_primary: Optional boolean
+    """
+    user = _current_user()
+    
+    template_id = request.form.get("template_id")
+    if not template_id:
+        return json_error("Template ID is required.", 400)
+    
+    template = CvTemplate.query.filter_by(id=int(template_id), is_active=True).first()
+    if not template:
+        return json_error("Template not found.", 404)
+    
+    # Get extracted text from either new file or existing resume
+    extracted_text = None
+    original_filename = None
+    
+    resume_id = request.form.get("resume_id")
+    if resume_id:
+        # Parse from existing uploaded resume
+        existing_resume = Resume.query.filter_by(id=int(resume_id), user_id=user.id).first()
+        if not existing_resume:
+            return json_error("Resume not found.", 404)
+        if existing_resume.source_type != "upload":
+            return json_error("Can only convert uploaded resumes.", 400)
+        
+        extracted_text = existing_resume.raw_text
+        original_filename = existing_resume.original_filename or existing_resume.title
+    else:
+        # Parse from new file upload
+        if "file" not in request.files:
+            return json_error("Resume file or resume_id is required.", 400)
+        file = request.files["file"]
+        if not file.filename:
+            return json_error("Resume file is required.", 400)
+        if not allowed_resume_file(file.filename):
+            return json_error("Only PDF, DOC and DOCX are supported.", 400)
+        
+        # Save and extract text
+        filename, stored_path, mime_type = save_uploaded_file(file, current_app.config["UPLOAD_FOLDER"], f"resume-{user.id}")
+        extracted_text = extract_text_from_upload(stored_path)
+        original_filename = file.filename
+
+    if not (extracted_text or "").strip():
+        return json_error("Could not extract readable text from this resume file.", 422)
+    
+    # Parse CV to structured data
+    user_info = {
+        'full_name': user.full_name,
+        'email': user.email,
+        'phone': user.phone,
+    }
+    parsed_data = parse_cv_to_structured(extracted_text, user_info)
+    
+    # Create structured resume payload with template
+    structured_json = _structured_resume_payload(parsed_data, user, template)
+    
+    # Create resume
+    resume = Resume(
+        user_id=user.id,
+        title=request.form.get("title") or f"Auto-parsed CV - {template.name}",
+        source_type="parsed",
+        original_filename=original_filename,
+        raw_text=extracted_text,
+        structured_json=structured_json,
+        template_name=template.name,
+        is_primary=bool(request.form.get("is_primary", "false").lower() == "true"),
+    )
+    if resume.is_primary:
+        Resume.query.filter_by(user_id=user.id, is_primary=True).update({"is_primary": False})
+    
+    db.session.add(resume)
+    db.session.flush()
+    
+    tag_ids = [int(tag_id) for tag_id in request.form.getlist("tag_ids") if str(tag_id).isdigit()]
+    if tag_ids:
+        resume.tags = Tag.query.filter(Tag.id.in_(tag_ids)).all()
+    
+    _sync_candidate_profile(user, parsed_data, structured_json)
+    db.session.commit()
+    _try_render_resume_files(resume)
+    db.session.commit()
+    
+    return json_ok(resume_to_dict(resume), "CV parsed and resume created", 201)
+
+
 @api_resumes_bp.post("/upload")
 @jwt_required()
 @role_required("candidate")
@@ -272,12 +403,26 @@ def upload_resume():
         return json_error("Only PDF, DOC and DOCX are supported.", 400)
     filename, stored_path, mime_type = save_uploaded_file(file, current_app.config["UPLOAD_FOLDER"], f"resume-{user.id}")
     extracted_text = extract_text_from_upload(stored_path)
-    uploaded_original = upload_file(
+
+    if not (extracted_text or "").strip():
+        return json_error("Could not extract readable text from this resume file.", 422)
+    
+    # Parse CV immediately to store structured data
+    user_info = {
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone": user.phone,
+    }
+    parsed_data = parse_cv_to_structured(extracted_text, user_info) if extracted_text else {}
+    
+    # Upload to Cloudinary
+    uploaded = upload_file(
         stored_path,
         folder="jobportal/resumes/uploaded",
-        public_id=f"{Path(filename).stem}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+        public_id=f"resume-{user.id}-{Path(filename).stem}",
     )
-    stored_reference = uploaded_original.url if uploaded_original else stored_path
+    stored_reference = uploaded.url if uploaded else stored_path
+    
     resume = Resume(
         user_id=user.id,
         title=request.form.get("title") or f"Uploaded CV {filename}",
@@ -287,7 +432,7 @@ def upload_resume():
         file_ext=Path(file.filename).suffix.lower(),
         mime_type=mime_type,
         raw_text=extracted_text,
-        structured_json={"extracted": True},
+        structured_json=parsed_data,  # ← Lưu parsed data thay vì {"extracted": True}
         is_primary=bool(request.form.get("is_primary", "false").lower() == "true"),
     )
     if resume.is_primary:
@@ -370,6 +515,20 @@ def export_resume(resume_id):
     if user.role != "admin" and resume.user_id != user.id:
         return json_error("Forbidden", 403)
     fmt = request.args.get("format", "pdf").lower()
+
+    if (resume.source_type or "").lower() == "upload":
+        stored = (resume.stored_path or "").strip()
+        download_name = resume.original_filename or f"resume-{resume.id}{resume.file_ext or '.pdf'}"
+        if stored.startswith(("http://", "https://")):
+            return redirect(stored)
+        if stored:
+            path = Path(stored)
+            if not path.is_absolute():
+                path = Path(current_app.config["UPLOAD_FOLDER"]) / stored.lstrip("/\\")
+            if path.exists():
+                return send_file(path, as_attachment=True, download_name=download_name)
+        return json_error("Không tìm thấy file CV đã tải lên.", 404)
+
     structured = resume.structured_json or {}
     data = {
         "full_name": structured.get("full_name") or resume.user.full_name,

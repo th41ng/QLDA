@@ -36,7 +36,7 @@ export default function LandingPage() {
         if (!active) return;
         setJobs(Array.isArray(jobData) ? jobData : []);
         setIndustryTags(Array.isArray(tagData) ? tagData : []);
-        setCompanies(Array.isArray(companyData) ? companyData : []);
+        setCompanies(Array.isArray(companyData?.companies) ? companyData.companies : []);
       })
       .catch(() => {
         if (!active) return;
@@ -210,7 +210,6 @@ export default function LandingPage() {
           <div className="feature-list feature-list--landing">
             <div className="feature-list-head">
               <strong>Ngành nghề nổi bật</strong>
-              <p>Lấy trực tiếp từ dữ liệu công khai trong database.</p>
             </div>
 
             {industrySource.length ? (

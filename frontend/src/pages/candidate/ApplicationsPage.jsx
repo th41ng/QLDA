@@ -13,7 +13,7 @@ const STATUS_META = {
   reviewing: {
     label: "Đang xem xét",
     tone: "reviewing",
-    description: "Recruiter đang đọc CV và đánh giá độ phù hợp.",
+    description: "Nhà tuyển dụng đang đọc CV và đánh giá độ phù hợp.",
   },
   interview: {
     label: "Phỏng vấn",
@@ -333,7 +333,7 @@ export default function CandidateApplicationsPage() {
                     <div className="candidate-match-meter">
                       <div className="candidate-match-meter-top">
                         <span>CV đang dùng</span>
-                        <strong>{application.resume?.source_type === "upload" ? "Upload" : "Manual"}</strong>
+                        <strong>{application.resume?.source_type === "upload" ? "CV tải lên" : "CV đã tạo"}</strong>
                       </div>
                       <div className="candidate-match-track">
                         <div className="candidate-match-fill" style={{ width: "100%" }} />
@@ -427,7 +427,7 @@ export default function CandidateApplicationsPage() {
               <section className="candidate-detail-block">
                 <div className="candidate-detail-block-head">
                   <h4>Thư ứng tuyển</h4>
-                  <span className="candidate-detail-hint">Nội dung đã lưu trong database</span>
+                  <span className="candidate-detail-hint">Nội dung thư ứng tuyển đã lưu</span>
                 </div>
                 <p className="candidate-cover-letter">{selectedApplication.cover_letter || "Chưa có thư ứng tuyển."}</p>
               </section>
@@ -474,7 +474,7 @@ function TimelineStep({ step, current }) {
         <strong>{step.label}</strong>
         <p>
           {step.key === "submitted" && "Hồ sơ đã được tạo và gửi đi."}
-          {step.key === "reviewing" && "Recruiter mở hồ sơ và đối chiếu CV."}
+          {step.key === "reviewing" && "Nhà tuyển dụng mở hồ sơ và đối chiếu CV."}
           {step.key === "interview" && "Ứng viên được mời trao đổi thêm."}
           {step.key === "accepted" && "Đây là mốc kết quả cuối cùng của hồ sơ."}
         </p>

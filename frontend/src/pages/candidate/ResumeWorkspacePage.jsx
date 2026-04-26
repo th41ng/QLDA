@@ -12,7 +12,7 @@ import { ROUTES } from "../../routes";
 const FILTERS = [
   { id: "all", label: "Tất cả" },
   { id: "manual", label: "CV tạo" },
-  { id: "upload", label: "CV upload" },
+  { id: "upload", label: "CV tải lên" },
 ];
 
 const SORT_OPTIONS = [
@@ -38,25 +38,6 @@ function matchesQuery(resume, query) {
     .join(" ")
     .toLowerCase();
   return haystack.includes(query.toLowerCase());
-}
-
-function buildAuthHeaders() {
-  const token = localStorage.getItem("auth_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-function filenameFromContentDisposition(headerValue, fallback) {
-  if (!headerValue) return fallback;
-  const utfMatch = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
-  if (utfMatch?.[1]) {
-    try {
-      return decodeURIComponent(utfMatch[1]);
-    } catch {
-      return fallback;
-    }
-  }
-  const plainMatch = headerValue.match(/filename="?([^";]+)"?/i);
-  return plainMatch?.[1] || fallback;
 }
 
 function toTemplateKey(resume) {
@@ -114,7 +95,9 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
 
   const setTab = (tab) => {
     setActiveTab(tab);
-    navigate(tab === "create" ? ROUTES.candidate.resumeCreate : ROUTES.candidate.resumes);
+    if (tab === "create") navigate(ROUTES.candidate.resumeCreate);
+    else if (tab === "parse") navigate(ROUTES.candidate.parseCV);
+    else navigate(ROUTES.candidate.resumes);
   };
 
   const filteredResumes = useMemo(() => {
@@ -144,26 +127,22 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
     return items;
   }, [resumes, filterMode, query, sortMode]);
 
-  const openExport = async (resumeId, format = "pdf") => {
-    const response = await fetch(api.resumes.exportUrl(resumeId, format), {
-      headers: buildAuthHeaders(),
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || `Không thể tải file (${response.status}).`);
-    }
-
-    const blob = await response.blob();
+  const openExport = async (resume, format = "pdf") => {
+    const fallbackName = resume.original_filename || `resume-${resume.id}.${format === "original" ? "pdf" : format}`;
+    const { blob, filename } = await api.resumes.exportFile(resume.id, format, fallbackName);
     const url = window.URL.createObjectURL(blob);
-    const fallbackName = `resume-${resumeId}.${format}`;
-    const downloadName = filenameFromContentDisposition(response.headers.get("content-disposition"), fallbackName);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = downloadName;
+    anchor.download = filename;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
     window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+  };
+
+  const openUploadedFile = (resume) => {
+    const url = resume.stored_path || api.resumes.originalFileUrl(resume.id);
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const openTemplateExport = async (resume) => {
@@ -178,7 +157,7 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
 
     const templateNode = exportTemplateRef.current?.querySelector(".cv-template");
     if (!templateNode) {
-      throw new Error("Không dựng được template để xuất PDF.");
+      throw new Error("Không chuẩn bị được CV để tải PDF.");
     }
 
     const html2pdfModule = await import("html2pdf.js");
@@ -209,10 +188,12 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
   const handleDownload = async (resume) => {
     try {
       setBusy(true);
-      if (resume.source_type === "manual") {
+      if (resume.source_type === "upload") {
+        await openExport(resume, "original");
+      } else if (resume.source_type === "manual") {
         await openTemplateExport(resume);
       } else {
-        await openExport(resume.id, "pdf");
+        await openExport(resume, "pdf");
       }
       setMessage("Đã bắt đầu tải PDF.");
     } catch (error) {
@@ -226,7 +207,7 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
   const handleUpload = async (fileFromInput) => {
     const file = fileFromInput || uploadFile;
     if (!file) {
-      setMessage("Chọn file trước khi upload.");
+      setMessage("Chọn file trước khi tải lên.");
       return;
     }
 
@@ -234,20 +215,24 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
       setBusy(true);
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("title", `CV upload - ${file.name}`);
+      formData.append("title", `CV tải lên - ${file.name}`);
       formData.append("is_primary", resumes.length ? "false" : "true");
       await api.resumes.upload(formData);
       setUploadFile(null);
-      setMessage("Đã upload CV vào database.");
+      setMessage("Đã lưu file CV vào CV của tôi.");
       await loadWorkspace();
     } catch (error) {
-      setMessage(error.message || "Không thể upload CV.");
+      setMessage(error.message || "Không thể tải CV lên.");
     } finally {
       setBusy(false);
     }
   };
 
   const handlePreview = (resume) => {
+    if (resume.source_type === "upload") {
+      openUploadedFile(resume);
+      return;
+    }
     setPreviewResume(resume);
   };
 
@@ -269,6 +254,14 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleConvertToTemplate = (resume) => {
+    if (resume.source_type !== "upload") {
+      setMessage("Chỉ có thể tạo CV theo mẫu từ CV đã tải lên.");
+      return;
+    }
+    navigate(ROUTES.candidate.parseCV, { state: { uploadedResume: resume } });
   };
 
   const handleSetPrimary = async (resume) => {
@@ -294,19 +287,19 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
           <span className="eyebrow">CV của tôi</span>
           <h1 className="rw-heading-xl">Quản lý CV gọn gàng, rõ vai trò</h1>
           <p className="lead">
-            Một nơi để theo dõi CV đã tạo, CV upload và CV đang dùng ứng tuyển. Thẻ CV hiển thị preview trực quan, thao tác nhanh và không lẫn với màn tạo CV.
+            Một nơi để theo dõi CV đã tạo, CV tải lên và CV đang dùng ứng tuyển. Thẻ CV hiển thị bản xem trước trực quan, thao tác nhanh và không lẫn với màn tạo CV.
           </p>
           <div className="candidate-cv-hero-tags">
-            <span className="candidate-cv-hero-tag">Preview CV thật</span>
+            <span className="candidate-cv-hero-tag">Xem trước CV</span>
             <span className="candidate-cv-hero-tag">Đặt CV chính</span>
-            <span className="candidate-cv-hero-tag">Tải file thật</span>
+            <span className="candidate-cv-hero-tag">Tải file CV</span>
           </div>
         </div>
 
         <div className="candidate-cv-hero-actions">
           <button type="button" className="btn" onClick={() => setTab("create")}>Tạo CV</button>
           <button type="button" className="rw-btn-outline-lg" onClick={() => uploadButtonRef.current?.click()}>
-            Upload CV
+            Tải lên CV
           </button>
           <input
             ref={uploadButtonRef}
@@ -337,7 +330,7 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
           <section className="rw-card candidate-cv-side-note">
             <h3>Nguyên tắc quản lý</h3>
             <p>
-              CV chính được làm nổi bật bằng viền xanh và badge. CV upload giữ nguyên file gốc, CV tạo từ mẫu có preview dữ liệu thật theo template đã chọn.
+              CV chính được làm nổi bật bằng viền xanh. CV tải lên giữ nguyên file gốc, CV tạo từ mẫu có bản xem trước theo mẫu đã chọn.
             </p>
           </section>
         </aside>
@@ -364,7 +357,7 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
                   className="rw-input rw-input-search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Tên CV, template, tag, file upload..."
+                  placeholder="Tên CV, mẫu CV, kỹ năng, file tải lên..."
                 />
               </label>
 
@@ -383,8 +376,8 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
 
           {loading ? (
             <div className="rw-state-default">
-              <h3>Đang tải CV từ database...</h3>
-              <p>Hệ thống đang lấy dữ liệu thật từ MySQL để dựng danh sách CV của bạn.</p>
+              <h3>Đang tải danh sách CV...</h3>
+              <p>Hệ thống đang chuẩn bị các CV đã lưu của bạn.</p>
             </div>
           ) : filteredResumes.length ? (
             <div className="candidate-cv-grid">
@@ -398,6 +391,7 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
                   onDownload={handleDownload}
                   onSetPrimary={handleSetPrimary}
                   onDelete={handleDeleteResume}
+                  onConvertToTemplate={handleConvertToTemplate}
                 />
               ))}
             </div>
@@ -405,7 +399,7 @@ export default function ResumeWorkspacePage({ defaultTab = "list" }) {
             <div className="rw-state-empty candidate-cv-empty">
               <h3>Chưa có CV phù hợp</h3>
               <p>
-                Hãy upload một file PDF có sẵn hoặc tạo CV mới từ template để bắt đầu quản lý CV thật của bạn.
+                Hãy tải lên một file CV có sẵn hoặc tạo CV mới từ mẫu để bắt đầu quản lý CV của bạn.
               </p>
             </div>
           )}

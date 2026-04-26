@@ -11,6 +11,7 @@ export default function ResumeForm({
   skillTags = [],
   lockTemplate = false,
   submitLabel,
+  personalInfoDescription = "Dữ liệu được tự động điền nếu có, bạn có thể kiểm tra và chỉnh sửa trước khi tạo CV.",
 }) {
   return (
     <form
@@ -23,15 +24,15 @@ export default function ResumeForm({
       <section className="rw-card rw-form-section-card">
         <div className="rw-flex-between rw-form-section-head">
           <div>
-            <h3 className="rw-form-section-title">{editingTitle || "Tạo CV từ dữ liệu thật"}</h3>
+            <h3 className="rw-form-section-title">{editingTitle || "Hoàn thiện thông tin CV"}</h3>
             <p className="rw-form-section-desc">
-              Điền thông tin cơ bản, chọn một mẫu PDF thật, rồi hệ thống sẽ tạo CV và xuất file cho bạn.
+              Điền thông tin, kiểm tra bản xem trước và tạo CV theo mẫu đã chọn.
             </p>
           </div>
           <span className="rw-badge rw-badge-blue">Candidate CV</span>
         </div>
 
-        <SectionTitle title="Thông tin cá nhân" description="Dữ liệu thật lấy từ tài khoản và hồ sơ ứng viên." />
+        <SectionTitle title="Thông tin cá nhân" description={personalInfoDescription} />
         <div className="rw-grid-2">
           <Field label="Họ và tên">
             <input value={values.full_name} onChange={(event) => onChange("full_name", event.target.value)} placeholder="Nguyễn Văn A" />
@@ -45,7 +46,7 @@ export default function ResumeForm({
           {!lockTemplate ? (
             <Field label="Mẫu CV">
               <select value={values.template_slug || values.template_name || ""} onChange={(event) => onChange("template_slug", event.target.value)}>
-                <option value="">Chọn template</option>
+                <option value="">Chọn mẫu CV</option>
                 {templates.map((template) => (
                   <option key={template.id || template.slug || template.name} value={template.slug || template.name}>
                     {template.name}
@@ -62,9 +63,9 @@ export default function ResumeForm({
       </section>
 
       <section className="rw-card rw-form-section-card">
-        <SectionTitle title="Thông tin nghề nghiệp" description="Các trường này giúp tạo ra CV phù hợp với template đã chọn." />
+        <SectionTitle title="Thông tin nghề nghiệp" description="Các trường này giúp CV phù hợp hơn với mẫu đã chọn." />
         <div className="rw-grid-2">
-          <Field label="Headline" full>
+          <Field label="Tiêu đề nghề nghiệp" full>
             <input value={values.headline} onChange={(event) => onChange("headline", event.target.value)} placeholder="Frontend Developer | React | 2 năm kinh nghiệm" />
           </Field>
           <Field label="Chức danh hiện tại">
@@ -97,14 +98,14 @@ export default function ResumeForm({
       </section>
 
       <section className="rw-card rw-form-section-card">
-        <SectionTitle title="Nội dung CV" description="Tag kỹ năng được dùng để chấm chính, ô kỹ năng tự do chỉ dùng bổ trợ và hiển thị trên CV." />
+        <SectionTitle title="Nội dung CV" description="Thêm kỹ năng để CV nổi bật hơn và hỗ trợ gợi ý việc làm phù hợp." />
         <Field label="Tóm tắt bản thân">
           <textarea rows="5" value={values.summary} onChange={(event) => onChange("summary", event.target.value)} placeholder="Giới thiệu ngắn về kinh nghiệm, thế mạnh và mục tiêu nghề nghiệp..." />
         </Field>
-        <Field label="Kỹ năng tự do" full>
+        <Field label="Kỹ năng hiển thị trên CV" full>
           <input value={values.skills} onChange={(event) => onChange("skills", event.target.value)} placeholder="ReactJS, JavaScript, CSS, REST API" />
         </Field>
-        <Field label="Tag kỹ năng" full>
+        <Field label="Chọn kỹ năng liên quan" full>
           <div className="recruiter-tag-grid">
             {skillTags.length ? skillTags.map((tag) => {
               const active = (values.tag_ids || []).includes(tag.id);
@@ -119,7 +120,7 @@ export default function ResumeForm({
                   <span>{tag.category_name || "Kỹ năng"}</span>
                 </button>
               );
-            }) : <span className="rw-label-sm">Chưa tải được tag kỹ năng.</span>}
+            }) : <span className="rw-label-sm">Chưa tải được danh sách kỹ năng.</span>}
           </div>
         </Field>
         <Field label="Kinh nghiệm">
@@ -139,7 +140,6 @@ export default function ResumeForm({
             <input type="checkbox" checked={Boolean(values.is_primary)} onChange={(event) => onChange("is_primary", event.target.checked)} />
             <span>Đặt CV này làm CV chính</span>
           </label>
-          <span className="rw-badge rw-badge-white">Lưu vào database</span>
         </div>
       </section>
 
