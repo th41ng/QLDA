@@ -121,6 +121,13 @@ def tokenize(text: str) -> list[str]:
 
 def _normalize_text_for_matching(text: str) -> str:
     normalized = str(text or "").lower()
+    # Normalize diacritics first so Vietnamese text is properly handled
+    normalized = normalized.replace("đ", "d").replace("Đ", "d")
+    normalized = normalized.replace("Ä'", "d").replace("Ä", "d")
+    normalized = unicodedata.normalize("NFD", normalized)
+    normalized = "".join(char for char in normalized if unicodedata.category(char) != "Mn")
+    normalized = unicodedata.normalize("NFC", normalized)
+    # Apply replacements
     replacements = {
         "rest api": "rest_api",
         "node js": "nodejs",
@@ -339,9 +346,6 @@ def job_profile_text(job: JobPosting) -> str:
 
 def resume_profile_text(resume: Resume) -> str:
     tag_blob = " ".join(tag_text(tag) for tag in resume.tags)
-    structured = resume.structured_json or {}
-    content_fields = _resume_text_fields(structured)
-    skills_text = _skills_text(structured)
     raw_text = ""
     if (resume.source_type or "").lower() == "upload":
         raw_text = (resume.raw_text or "").strip()
@@ -351,8 +355,8 @@ def resume_profile_text(resume: Resume) -> str:
             [
                 resume.title,
                 raw_text,
-                *content_fields,
-                skills_text,
+                resume.structured_json.get("headline", "") if resume.structured_json else "",
+                resume.structured_json.get("summary", "") if resume.structured_json else "",
                 tag_blob,
             ],
         )
@@ -401,7 +405,7 @@ def score_resume_for_job(resume: Resume, job: JobPosting) -> dict:
     resume_tokens = Counter(tokenize(resume_profile_text(resume)))
     job_tokens = Counter(tokenize(job_profile_text(job)))
     if not resume_tokens or not job_tokens:
-        return {"score": 0, "breakdown": {"tags": 0, "text": 0, "location": 0, "experience": 0, "detail": {}}}
+        return {"score": 0, "breakdown": {"tags": 0, "text": 0, "location": 0, "experience": 0}}
 
     shared = set(resume_tokens) & set(job_tokens)
     coverage_score = sum(min(resume_tokens[t], job_tokens[t]) for t in shared) / max(sum(job_tokens.values()), 1)
