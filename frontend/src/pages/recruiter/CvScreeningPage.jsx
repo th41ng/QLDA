@@ -5,10 +5,7 @@ import { ROUTES } from "../../routes";
 import {
   formatDate,
   formatDateTime,
-  mapEmploymentLabel,
-  mapExperienceLabel,
   mapStatusLabel,
-  mapWorkplaceLabel,
   normalizeText,
 } from "./jobWorkspaceData";
 
@@ -29,11 +26,38 @@ function skillText(tags) {
   return (tags || []).slice(0, 4).map((tag) => tag.name).join(", ");
 }
 
-function renderEngineLabel(engine) {
-  if (engine?.used_ai) {
-    return `AI · ${engine.model || "LLM"}`;
+function parseStructuredSkills(skills) {
+  if (Array.isArray(skills)) {
+    return skills.map((item) => String(item || "").trim()).filter(Boolean);
   }
-  return "Heuristic";
+  if (typeof skills === "string") {
+    return skills
+      .split(/,|;|\n|\|/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function mapResumeSourceLabel(sourceType) {
+  const normalized = String(sourceType || "").trim().toLowerCase();
+  if (normalized === "upload") return "Tải lên";
+  if (normalized === "generated") return "Tạo tự động";
+  return "Tự tạo";
+}
+
+function cleanInsightText(value) {
+  return String(value || "")
+    .replace(/\./g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cleanInsightList(values) {
+  if (!Array.isArray(values)) return [];
+  return values
+    .map((item) => cleanInsightText(item))
+    .filter(Boolean);
 }
 
 export default function RecruiterCvScreeningPage() {
@@ -50,7 +74,7 @@ export default function RecruiterCvScreeningPage() {
   const [scoreFilter, setScoreFilter] = useState("all");
   const [selectedResumeId, setSelectedResumeId] = useState(null);
   const [shortlistedIds, setShortlistedIds] = useState([]);
-  const [debugMode, setDebugMode] = useState(false);
+  const [shortlistBusyId, setShortlistBusyId] = useState(null);
 
   const selectedJobId = Number(searchParams.get("job") || 0) || null;
 
@@ -118,13 +142,15 @@ export default function RecruiterCvScreeningPage() {
       setLoadingScreen(true);
       setError("");
       try {
-        const payload = debugMode
-          ? await api.jobs.screenDebug(selectedJob.id)
-          : await api.jobs.screen(selectedJob.id);
-        const data = debugMode ? payload?.results : payload;
+        const data = await api.jobs.screen(selectedJob.id);
         if (!mounted) return;
         const nextScreening = Array.isArray(data) ? data : [];
         setScreening(nextScreening);
+        setShortlistedIds(
+          nextScreening
+            .filter((item) => Boolean(item.is_shortlisted))
+            .map((item) => item.application_id),
+        );
         setSelectedResumeId((current) => current || nextScreening[0]?.resume?.id || null);
         setMessage(nextScreening.length ? "" : "Chưa có CV để sàng lọc.");
       } catch (loadError) {
@@ -142,7 +168,7 @@ export default function RecruiterCvScreeningPage() {
     return () => {
       mounted = false;
     };
-  }, [selectedJob?.id, debugMode]);
+  }, [selectedJob?.id]);
 
   const filteredScreening = useMemo(() => {
     const keyword = normalizeText(query);
@@ -168,8 +194,23 @@ export default function RecruiterCvScreeningPage() {
         );
         return (!keyword || haystack.includes(keyword)) && scoreMatch;
       })
-      .sort((left, right) => Number(right.score || 0) - Number(left.score || 0));
-  }, [query, scoreFilter, screening]);
+      .sort((left, right) => {
+        const leftShortlisted = shortlistedIds.includes(left.application_id) ? 1 : 0;
+        const rightShortlisted = shortlistedIds.includes(right.application_id) ? 1 : 0;
+        if (rightShortlisted !== leftShortlisted) {
+          return rightShortlisted - leftShortlisted;
+        }
+
+        const scoreDiff = Number(right.score || 0) - Number(left.score || 0);
+        if (scoreDiff !== 0) {
+          return scoreDiff;
+        }
+
+        const rightShortlistedAt = right.shortlisted_at ? Date.parse(right.shortlisted_at) : 0;
+        const leftShortlistedAt = left.shortlisted_at ? Date.parse(left.shortlisted_at) : 0;
+        return rightShortlistedAt - leftShortlistedAt;
+      });
+  }, [query, scoreFilter, screening, shortlistedIds]);
 
   useEffect(() => {
     if (!filteredScreening.length) {
@@ -186,6 +227,26 @@ export default function RecruiterCvScreeningPage() {
     [filteredScreening, selectedResumeId],
   );
 
+  const selectedStructuredSkills = useMemo(
+    () => parseStructuredSkills(selectedResult?.resume?.structured_json?.skills),
+    [selectedResult],
+  );
+
+  const aiRecommendation = useMemo(
+    () => cleanInsightText(selectedResult?.insights?.recommendation),
+    [selectedResult],
+  );
+
+  const aiStrengths = useMemo(
+    () => cleanInsightList(selectedResult?.insights?.strengths),
+    [selectedResult],
+  );
+
+  const aiConcerns = useMemo(
+    () => cleanInsightList(selectedResult?.insights?.concerns),
+    [selectedResult],
+  );
+
   const jobApplicantCount = useMemo(
     () => applications.filter((app) => app.job_id === selectedJob?.id).length,
     [applications, selectedJob?.id],
@@ -197,10 +258,10 @@ export default function RecruiterCvScreeningPage() {
     const shortlisted = filteredScreening.filter((item) => Number(item.score || 0) >= 80).length;
     const premium = filteredScreening.filter((item) => Number(item.score || 0) >= 90).length;
     return [
-      { label: "CV đã chấm", value: filteredScreening.length, hint: "Kết quả theo job đang chọn" },
+      { label: "CV đã chấm", value: filteredScreening.length, hint: "Kết quả theo tin đang chọn" },
       { label: "Điểm trung bình", value: average ? average.toFixed(1) : "0.0", hint: "Mức phù hợp tổng quan" },
-      { label: "Nên phỏng vấn", value: shortlisted, hint: "Score từ 80 trở lên" },
-      { label: "Rất phù hợp", value: premium, hint: "Score từ 90 trở lên" },
+      { label: "Nên phỏng vấn", value: shortlisted, hint: "Điểm từ 80 trở lên" },
+      { label: "Rất phù hợp", value: premium, hint: "Điểm từ 90 trở lên" },
     ];
   }, [filteredScreening]);
 
@@ -226,20 +287,37 @@ export default function RecruiterCvScreeningPage() {
     setSelectedResumeId(null);
   };
 
-  const toggleShortlist = (resumeId) => {
-    setShortlistedIds((current) =>
-      current.includes(resumeId) ? current.filter((id) => id !== resumeId) : [...current, resumeId],
-    );
-  };
+  const toggleShortlist = async (resultItem) => {
+    const applicationId = resultItem?.application_id;
+    if (!applicationId) return;
 
-  const recommendationText = useMemo(() => {
-    const avg = Number(averageScore || 0);
-    if (!selectedJob) return "Chưa chọn tin tuyển dụng.";
-    if (!filteredScreening.length) return "Chưa có CV nào trong kết quả sàng lọc.";
-    if (avg >= 85) return "Có nhiều CV rất phù hợp. Nên ưu tiên mời phỏng vấn ngay.";
-    if (avg >= 70) return "Có một nhóm CV ổn. Nên xem từng hồ sơ để chọn shortlist.";
-    return "Kết quả còn thấp. Nên chỉnh lại mô tả job, tag hoặc mức kinh nghiệm mong muốn.";
-  }, [averageScore, filteredScreening.length, selectedJob]);
+    const isCurrentlyShortlisted = shortlistedIds.includes(applicationId);
+    setShortlistBusyId(applicationId);
+    try {
+      const response = await api.applications.setShortlist(applicationId, !isCurrentlyShortlisted);
+      const isShortlistedNext = Boolean(response?.is_shortlisted);
+      setShortlistedIds((current) =>
+        isShortlistedNext
+          ? (current.includes(applicationId) ? current : [...current, applicationId])
+          : current.filter((id) => id !== applicationId),
+      );
+      setScreening((current) =>
+        current.map((item) =>
+          item.application_id === applicationId
+            ? {
+                ...item,
+                is_shortlisted: isShortlistedNext,
+                shortlisted_at: response?.shortlisted_at || null,
+              }
+            : item,
+        ),
+      );
+    } catch (err) {
+      setError(err.message || "Không thể cập nhật trạng thái ưu tiên.");
+    } finally {
+      setShortlistBusyId(null);
+    }
+  };
 
   return (
     <section className="cv-screening-page">
@@ -248,7 +326,7 @@ export default function RecruiterCvScreeningPage() {
           <span className="eyebrow">Nhà tuyển dụng</span>
           <h1 className="rw-heading-xl">Phân tích sàng lọc CV</h1>
           <p className="cv-screening-hero-lead">
-            Chọn một tin tuyển dụng để xem danh sách CV đã được backend chấm điểm, sau đó lọc nhanh theo score và mở chi tiết từng hồ sơ.
+            Chọn một tin tuyển dụng để xem danh sách CV đã được hệ thống chấm điểm, sau đó lọc nhanh theo điểm và mở chi tiết từng hồ sơ.
           </p>
           <div className="cv-screening-hero-actions">
             <Link className="btn" to={ROUTES.recruiter.jobs}>Quay lại tin tuyển dụng</Link>
@@ -256,8 +334,8 @@ export default function RecruiterCvScreeningPage() {
           </div>
         </div>
         <article className="cv-screening-focus-card">
-          <span className="rw-muted-xs--blue">Job đang sàng lọc</span>
-          <h2 className="rw-heading-2xl" style={{ marginTop: "0.35rem" }}>{selectedJob?.title || "Chưa chọn job"}</h2>
+          <span className="rw-muted-xs--blue">Tin đang sàng lọc</span>
+          <h2 className="rw-heading-2xl" style={{ marginTop: "0.35rem" }}>{selectedJob?.title || "Chưa chọn tin"}</h2>
           <p className="cv-screening-focus-summary">
             {selectedJob?.summary || "Chọn một tin tuyển dụng để xem kết quả phân tích CV."}
           </p>
@@ -265,7 +343,7 @@ export default function RecruiterCvScreeningPage() {
             <div><span>Công ty</span><strong>{company?.company_name || "Chưa có"}</strong></div>
             <div><span>Số hồ sơ</span><strong>{String(jobApplicantCount).padStart(2, "0")}</strong></div>
             <div><span>Trạng thái</span><strong>{mapStatusLabel(selectedJob?.status)}</strong></div>
-            <div><span>Điểm TB</span><strong>{averageScore}</strong></div>
+            <div><span>Điểm trung bình</span><strong>{averageScore}</strong></div>
           </div>
         </article>
       </section>
@@ -277,7 +355,7 @@ export default function RecruiterCvScreeningPage() {
         <div className="cv-screening-toolbar-search">
           <label>
             <span>Tìm hồ sơ</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tên ứng viên, kỹ năng, headline..." />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tên ứng viên, kỹ năng, tiêu đề..." />
           </label>
           <label>
             <span>Ngưỡng điểm</span>
@@ -288,24 +366,13 @@ export default function RecruiterCvScreeningPage() {
               <option value="70">Từ 70+</option>
             </select>
           </label>
-          <label style={{ alignSelf: "end" }}>
-            <button
-              type="button"
-              className={debugMode ? "rw-btn-outline-lg" : "btn"}
-              onClick={() => setDebugMode((value) => !value)}
-            >
-              {debugMode ? "Tắt Debug" : "Bật Debug"}
-            </button>
-          </label>
         </div>
         <div className="cv-screening-toolbar-note">
-          <strong>API data</strong>
+          <strong>Dữ liệu hệ thống</strong>
           <span>
             {loadingJobs || loadingScreen
               ? "Đang tải dữ liệu..."
-              : debugMode
-                ? "Debug mode: đang hiển thị dữ liệu giải thích điểm"
-                : "Sẵn sàng sàng lọc"}
+              : "Sẵn sàng sàng lọc"}
           </span>
         </div>
       </div>
@@ -315,10 +382,10 @@ export default function RecruiterCvScreeningPage() {
           <section className="rw-card cv-screening-card">
             <div className="rw-flex-between">
               <div>
-                <h3 className="cv-screening-card-title">Danh sách job</h3>
-                <p className="cv-screening-card-desc">Chọn job để xem CV phù hợp nhất.</p>
+                <h3 className="cv-screening-card-title">Danh sách tin tuyển dụng</h3>
+                <p className="cv-screening-card-desc">Chọn tin để xem CV phù hợp nhất.</p>
               </div>
-              <span className="rw-badge rw-badge-slate">{jobs.length} job</span>
+              <span className="rw-badge rw-badge-slate">{jobs.length} tin tuyển dụng</span>
             </div>
             <div className="cv-screening-job-list">
               {jobs.map((job) => {
@@ -342,28 +409,6 @@ export default function RecruiterCvScreeningPage() {
               })}
             </div>
           </section>
-
-          <section className="rw-card cv-screening-card">
-            <h3 className="cv-screening-card-title">Đề xuất</h3>
-            <p className="cv-screening-card-desc">{recommendationText}</p>
-            <div className="cv-screening-suggestion-list">
-              <div>
-                <strong>{selectedJob ? mapWorkplaceLabel(selectedJob.workplace_type) : "Chưa có"}</strong>
-                <span>Workplace</span>
-              </div>
-              <div>
-                <strong>{selectedJob ? mapEmploymentLabel(selectedJob.employment_type) : "Chưa có"}</strong>
-                <span>Employment</span>
-              </div>
-              <div>
-                <strong>{selectedJob ? mapExperienceLabel(selectedJob.experience_level) : "Chưa có"}</strong>
-                <span>Experience</span>
-              </div>
-            </div>
-            <Link className="rw-btn-outline-lg cv-screening-link" to={selectedJob ? ROUTES.recruiter.jobEdit(selectedJob.id) : ROUTES.recruiter.jobs}>
-              Chỉnh sửa job
-            </Link>
-          </section>
         </aside>
 
         <main className="cv-screening-main">
@@ -381,7 +426,7 @@ export default function RecruiterCvScreeningPage() {
             <div className="rw-flex-between" style={{ marginBottom: "0.75rem" }}>
               <div>
                 <h3 className="cv-screening-card-title">Kết quả sàng lọc</h3>
-                <p className="cv-screening-card-desc">Danh sách CV đã được chấm điểm theo job hiện tại.</p>
+                <p className="cv-screening-card-desc">Danh sách CV đã được chấm điểm theo tin hiện tại.</p>
               </div>
               <span className="rw-badge rw-badge-blue">{filteredScreening.length} kết quả</span>
             </div>
@@ -392,7 +437,7 @@ export default function RecruiterCvScreeningPage() {
                   const resume = item.resume || {};
                   const band = scoreBand(Number(item.score || 0));
                   const selected = selectedResumeId === resume.id;
-                  const shortlisted = shortlistedIds.includes(resume.id);
+                  const shortlisted = shortlistedIds.includes(item.application_id);
                   return (
                     <article
                       key={resume.id}
@@ -409,7 +454,7 @@ export default function RecruiterCvScreeningPage() {
                           </div>
                           <p>{resume.structured_json?.headline || resume.title || "Chưa có tiêu đề"}</p>
                         </div>
-                        <span className="rw-badge rw-badge-slate">{shortlistLabel(Number(item.score || 0))}</span>
+                        <span className="rw-badge rw-badge-slate">{shortlisted ? "Đã ưu tiên" : shortlistLabel(Number(item.score || 0))}</span>
                       </div>
 
                       <div className="cv-screening-result-meta">
@@ -438,14 +483,14 @@ export default function RecruiterCvScreeningPage() {
                         <button
                           type="button"
                           className={shortlisted ? "rw-btn-outline-lg cv-screening-shortlist cv-screening-shortlist--active" : "rw-btn-outline-lg cv-screening-shortlist"}
+                          disabled={shortlistBusyId === item.application_id}
                           onClick={(event) => {
                             event.stopPropagation();
-                            toggleShortlist(resume.id);
+                            void toggleShortlist(item);
                           }}
                         >
-                          {shortlisted ? "Đã shortlist" : "Shortlist"}
+                          {shortlistBusyId === item.application_id ? "Đang lưu..." : shortlisted ? "Đã ưu tiên" : "Ưu tiên"}
                         </button>
-                        <span className="rw-badge rw-badge-slate">{renderEngineLabel(item.engine)}</span>
                         <span className={`cv-screening-band cv-screening-band--${band.tone}`}>{band.label}</span>
                       </div>
                     </article>
@@ -454,7 +499,7 @@ export default function RecruiterCvScreeningPage() {
               ) : loadingScreen ? (
                 <div className="cv-screening-empty">Đang tải kết quả sàng lọc...</div>
               ) : (
-                <div className="cv-screening-empty">Chưa có CV phù hợp cho job này.</div>
+                <div className="cv-screening-empty">Chưa có CV phù hợp cho tin này.</div>
               )}
             </div>
           </section>
@@ -473,68 +518,39 @@ export default function RecruiterCvScreeningPage() {
                   </div>
                 </div>
                 <div className="cv-screening-detail-grid">
-                  <div><span>Loại CV</span><strong>{selectedResult.resume?.source_type || "manual"}</strong></div>
-                  <div><span>Template</span><strong>{selectedResult.resume?.template_name || "Chưa có"}</strong></div>
+                  <div><span>Loại CV</span><strong>{mapResumeSourceLabel(selectedResult.resume?.source_type)}</strong></div>
+                  <div><span>Mẫu CV</span><strong>{selectedResult.resume?.template_name || "Chưa có"}</strong></div>
                   <div><span>Ngày cập nhật</span><strong>{formatDate(selectedResult.resume?.updated_at)}</strong></div>
-                  <div><span>Tag</span><strong>{(selectedResult.resume?.tags || []).length}</strong></div>
+                  <div><span>Kỹ năng</span><strong>{selectedStructuredSkills.length}</strong></div>
                 </div>
                 <div className="cv-screening-detail-block">
-                  <span>Summary</span>
-                  <p>{selectedResult.resume?.structured_json?.summary || "Chưa có summary."}</p>
+                  <span>Tóm tắt</span>
+                  <p>{selectedResult.resume?.structured_json?.summary || "Chưa có tóm tắt."}</p>
                 </div>
                 <div className="cv-screening-detail-block">
-                  <span>Skills</span>
+                  <span>Kỹ năng</span>
                   <div className="cv-screening-tags">
-                    {(selectedResult.resume?.tags || []).map((tag) => (
-                      <span key={tag.id || tag.slug} className="cv-screening-tag">{tag.name}</span>
-                    ))}
+                    {selectedStructuredSkills.length
+                      ? selectedStructuredSkills.map((skill) => (
+                          <span key={skill} className="cv-screening-tag">{skill}</span>
+                        ))
+                      : <span>Chưa có kỹ năng</span>}
                   </div>
                 </div>
                 <div className="cv-screening-detail-block">
-                  <span>Education</span>
+                  <span>Học vấn</span>
                   <p>{selectedResult.resume?.structured_json?.education || "Chưa có"}</p>
                 </div>
                 <div className="cv-screening-detail-block">
                   <span>Nhận định AI</span>
-                  <p>{selectedResult.insights?.recommendation || "Chưa có nhận định."}</p>
+                  <p>{aiRecommendation || "Chưa có nhận định"}</p>
                   <p style={{ marginTop: "0.5rem" }}>
-                    Điểm mạnh: {(selectedResult.insights?.strengths || []).join(", ") || "Chưa có"}
+                    Điểm mạnh: {aiStrengths.join(", ") || "Chưa có"}
                   </p>
                   <p style={{ marginTop: "0.35rem" }}>
-                    Rủi ro: {(selectedResult.insights?.concerns || []).join(", ") || "Chưa có"}
+                    Rủi ro: {aiConcerns.join(", ") || "Chưa có"}
                   </p>
                 </div>
-                {debugMode ? (
-                  <div className="cv-screening-detail-block">
-                    <span>Debug Scoring</span>
-                    <p>
-                      Tag match: {selectedResult.debug?.base?.tags?.final_match ?? 0}/
-                      {selectedResult.debug?.base?.tags?.job_tag_count ?? 0}
-                      {" · "}
-                      explicit: {selectedResult.debug?.base?.tags?.explicit_match ?? 0}
-                      {" · "}
-                      inferred: {selectedResult.debug?.base?.tags?.inferred_match ?? 0}
-                    </p>
-                    <p style={{ marginTop: "0.35rem" }}>
-                      Text coverage: {Number(selectedResult.debug?.base?.text?.coverage_score || 0).toFixed(3)}
-                      {" · "}
-                      keyword bonus: {Number(selectedResult.debug?.base?.text?.keyword_bonus || 0).toFixed(3)}
-                    </p>
-                    <p style={{ marginTop: "0.35rem" }}>
-                      Exp: {selectedResult.debug?.base?.experience?.resume_years ?? 0} năm /
-                      {selectedResult.debug?.base?.experience?.required_years ?? 0} năm
-                      {" · ratio "}
-                      {Number(selectedResult.debug?.base?.experience?.score_ratio || 0).toFixed(3)}
-                    </p>
-                    <p style={{ marginTop: "0.35rem" }}>
-                      Semantic raw: {Number(selectedResult.debug?.semantic?.raw || 0).toFixed(1)}
-                      {" · calibrated: "}
-                      {Number(selectedResult.debug?.semantic?.calibrated || 0).toFixed(1)}
-                      {" · gate: "}
-                      {Number(selectedResult.debug?.semantic?.gate || 0).toFixed(3)}
-                    </p>
-                  </div>
-                ) : null}
               </>
             ) : (
               <div className="cv-screening-empty">Chọn một hồ sơ để xem chi tiết.</div>
@@ -545,16 +561,20 @@ export default function RecruiterCvScreeningPage() {
             <h3 className="cv-screening-card-title">Lưu ý phân tích</h3>
             <div className="cv-screening-notes">
               <div>
-                <strong>Score cao</strong>
+                <strong>Điểm cao</strong>
                 <span>Ưu tiên mời phỏng vấn.</span>
               </div>
               <div>
-                <strong>Score trung bình</strong>
-                <span>Đọc kỹ summary và kinh nghiệm.</span>
+                <strong>Nút Ưu tiên</strong>
+                <span>Lưu hồ sơ vào danh sách ứng viên nổi bật của tin tuyển dụng và giữ lại sau khi tải lại trang.</span>
               </div>
               <div>
-                <strong>Score thấp</strong>
-                <span>Đối chiếu lại tag và level kinh nghiệm.</span>
+                <strong>Điểm trung bình</strong>
+                <span>Đọc kỹ tóm tắt và kinh nghiệm.</span>
+              </div>
+              <div>
+                <strong>Điểm thấp</strong>
+                <span>Đối chiếu lại thẻ kỹ năng và cấp độ kinh nghiệm.</span>
               </div>
             </div>
             <div style={{ marginTop: "1rem" }}>

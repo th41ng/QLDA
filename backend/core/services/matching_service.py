@@ -11,18 +11,9 @@ except Exception:  # pragma: no cover - optional dependency
 
 from ...models import JobPosting, MatchScore, Resume, Tag
 
-RESUME_TEXT_FIELDS = (
-    "headline",
-    "summary",
-    "experience",
-    "education",
-    "additional_info",
-    "current_title",
-)
-
 STOPWORDS = {
     "and", "or", "the", "of", "to", "in", "with", "a", "an", "for", "on", "at",
-    "va", "cho", "cua", "voi", "la", "from", "by", "job", "work",
+    "và", "cho", "của", "với", "là", "from", "by", "job", "work",
 }
 
 TERM_ALIASES = {
@@ -104,15 +95,6 @@ def warmup_embedding_model() -> dict:
     }
 
 
-def _normalize_text(text: str) -> str:
-    value = str(text or "").lower()
-    value = value.replace("đ", "d").replace("Đ", "d")
-    value = value.replace("Ä‘", "d").replace("Ä", "d")
-    value = unicodedata.normalize("NFD", value)
-    value = "".join(char for char in value if unicodedata.category(char) != "Mn")
-    return unicodedata.normalize("NFC", value)
-
-
 def tokenize(text: str) -> list[str]:
     normalized = _normalize_text_for_matching(text)
     words = re.findall(r"[a-z0-9_+#.]+", normalized)
@@ -121,13 +103,10 @@ def tokenize(text: str) -> list[str]:
 
 def _normalize_text_for_matching(text: str) -> str:
     normalized = str(text or "").lower()
-    # Normalize diacritics first so Vietnamese text is properly handled
-    normalized = normalized.replace("đ", "d").replace("Đ", "d")
-    normalized = normalized.replace("Ä'", "d").replace("Ä", "d")
-    normalized = unicodedata.normalize("NFD", normalized)
-    normalized = "".join(char for char in normalized if unicodedata.category(char) != "Mn")
-    normalized = unicodedata.normalize("NFC", normalized)
-    # Apply replacements
+
+    normalized = unicodedata.normalize("NFKD", normalized)
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+
     replacements = {
         "rest api": "rest_api",
         "node js": "nodejs",
@@ -140,10 +119,13 @@ def _normalize_text_for_matching(text: str) -> str:
         "tp. ho chi minh": "hcm",
         "thanh pho ho chi minh": "hcm",
     }
+
     for old, new in replacements.items():
         normalized = normalized.replace(old, new)
+
     normalized = re.sub(r"[^a-z0-9_+#\s]", " ", normalized)
     normalized = re.sub(r"\s+", " ", normalized).strip()
+
     return normalized
 
 
@@ -344,61 +326,48 @@ def job_profile_text(job: JobPosting) -> str:
     )
 
 
+def _resume_text_fields(resume: Resume) -> dict:
+    """Build normalized resume text buckets for matching/scoring.
+
+    Primary fields are stronger signals (headline/summary/experience and skill tags).
+    Support fields add context (raw text, free-form skills text, education, etc.).
+    """
+    structured = resume.structured_json or {}
+    skill_tag_blob = " ".join(tag_text(tag) for tag in (resume.tags or []))
+
+    skills_raw = structured.get("skills")
+    if isinstance(skills_raw, list):
+        skills_text = " ".join(str(item) for item in skills_raw if str(item).strip())
+    else:
+        skills_text = str(skills_raw or "")
+
+    primary = [
+        resume.title,
+        structured.get("headline"),
+        structured.get("summary"),
+        structured.get("experience"),
+        skill_tag_blob,
+    ]
+    support = [
+        resume.raw_text,
+        skills_text,
+        structured.get("education"),
+        structured.get("additional_info"),
+        structured.get("current_title"),
+    ]
+
+    return {
+        "primary": [str(item).strip() for item in primary if str(item or "").strip()],
+        "support": [str(item).strip() for item in support if str(item or "").strip()],
+        "skill_tags": skill_tag_blob,
+        "skills_text": skills_text,
+    }
+
+
 def resume_profile_text(resume: Resume) -> str:
-    tag_blob = " ".join(tag_text(tag) for tag in resume.tags)
-    raw_text = ""
-    if (resume.source_type or "").lower() == "upload":
-        raw_text = (resume.raw_text or "").strip()
-    return " ".join(
-        filter(
-            None,
-            [
-                resume.title,
-                raw_text,
-                resume.structured_json.get("headline", "") if resume.structured_json else "",
-                resume.structured_json.get("summary", "") if resume.structured_json else "",
-                tag_blob,
-            ],
-        )
-    )
-
-
-def _get_desired_location(resume: Resume) -> str:
-    desired = (resume.structured_json or {}).get("desired_location") or ""
-    if not desired:
-        profile = getattr(getattr(resume, "user", None), "candidate_profile", None)
-        if profile:
-            desired = profile.desired_location or ""
-    return desired.strip() if isinstance(desired, str) else ""
-
-
-def _get_years_experience(resume: Resume) -> int:
-    years = (resume.structured_json or {}).get("years_experience")
-    if years is None:
-        profile = getattr(getattr(resume, "user", None), "candidate_profile", None)
-        if profile and profile.years_experience:
-            return int(profile.years_experience)
-        return 0
-    try:
-        return int(years or 0)
-    except (TypeError, ValueError):
-        return 0
-
-
-def _location_score(resume: Resume, job: JobPosting) -> float:
-    if (job.workplace_type or "").lower() == "remote":
-        return 1.0
-    job_loc = (job.location or "").strip().lower()
-    desired = _get_desired_location(resume).lower()
-    if not job_loc or not desired:
-        return 0.0
-    if job_loc in desired or desired in job_loc:
-        return 1.0
-    job_words = set(tokenize(job_loc))
-    desired_words = set(tokenize(desired))
-    if job_words and desired_words and (job_words & desired_words):
-        return 1.0
-    return 0.0
+    fields = _resume_text_fields(resume)
+    # Duplicate primary signals once so explicit skill tags/structured core fields dominate.
+    return " ".join(fields["primary"] + fields["primary"] + fields["support"])
 
 
 def score_resume_for_job(resume: Resume, job: JobPosting) -> dict:
