@@ -101,6 +101,8 @@ def _screen_results_for_job(job: JobPosting, include_debug: bool = False):
             "application_id": app.id,
             "score": scored.get("score", 0),
             "breakdown": scored.get("breakdown", {}),
+            "breakdown_normalized": scored.get("breakdown_normalized", scored.get("breakdown", {})),
+            "breakdown_raw": scored.get("breakdown_raw", {}),
             "insights": scored.get("insights", {}),
             "engine": scored.get("engine", {}),
             "resume": _resume_for_screening(app.resume),

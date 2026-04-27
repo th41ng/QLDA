@@ -6564,15 +6564,6 @@ ul { padding-left:18px; color:var(--muted); }
   gap: 10px;
 }
 
-.recruiter-editor-checklist {
-  margin: 0;
-  padding-left: 18px;
-  color: #475569;
-  line-height: 1.75;
-  display: grid;
-  gap: 8px;
-}
-
 .rw-btn-outline-lg, .rw-btn-outline, .rw-btn-danger, .btn {
   white-space: nowrap;
 }
@@ -7754,6 +7745,13 @@ ul { padding-left:18px; color:var(--muted); }
   display: block;
   margin-top: 0.25rem;
   color: #0f172a;
+}
+
+.cv-screening-breakdown small {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  color: #64748b;
 }
 
 .cv-screening-result-actions {

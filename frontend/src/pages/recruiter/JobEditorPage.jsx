@@ -381,7 +381,6 @@ export default function RecruiterJobEditorPage() {
         >
           <EditorSection
             title="Thông tin cơ bản"
-            description="Tiêu đề, mô tả ngắn và slug là phần đầu tiên backend sẽ lưu vào `job_postings`."
           >
             <div className="recruiter-editor-grid">
               <Field label="Tiêu đề job *" error={errors.title && touched.title} hint="5-180 ký tự">
@@ -447,7 +446,6 @@ export default function RecruiterJobEditorPage() {
 
           <EditorSection
             title="Nội dung công việc"
-            description="Ba khối chính backend đang lưu là `description`, `responsibilities` và `requirements`. Điền đầy đủ để thu hút ứng viên phù hợp."
           >
             <div className="recruiter-editor-stack">
               <Field label="Mô tả công việc *" error={errors.description && touched.description} hint="Tối thiểu 20 ký tự">
@@ -672,19 +670,6 @@ Lịch làm việc linh hoạt
               <PreviewItem label="Trạng thái" value={preview.status} />
               <PreviewItem label="Deadline" value={form.deadline ? form.deadline : "Chưa chọn"} />
             </div>
-          </section>
-
-          <section className="recruiter-editor-sidecard">
-            <div className="recruiter-editor-sidehead">
-              <span className="rw-muted-xs--blue">Dữ liệu khớp DB</span>
-              <h3 className="rw-heading-2xl">Checklist</h3>
-            </div>
-            <ul className="recruiter-editor-checklist">
-              <li>Tiêu đề, mô tả, yêu cầu và trách nhiệm đều map vào `job_postings`.</li>
-              <li>Lương, deadline, số lượng tuyển và trạng thái đi đúng field backend.</li>
-              <li>Tags được gửi qua `tag_ids` để backend gắn quan hệ many-to-many.</li>
-              <li>Công ty được lấy từ `/companies/me`, đúng với rule tạo job hiện tại.</li>
-            </ul>
           </section>
 
           {tagSummary.length ? (

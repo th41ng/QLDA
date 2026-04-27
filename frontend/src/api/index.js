@@ -150,6 +150,18 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify(typeof payload === "string" ? { status: payload } : payload),
       }),
+    setShortlist: async (applicationId, shouldShortlist) => {
+      const status = shouldShortlist ? "reviewing" : "submitted";
+      const resp = await apiRequest(`/applications/${applicationId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      return {
+        is_shortlisted: status === "reviewing",
+        shortlisted_at: resp?.updated_at || null,
+        application: resp,
+      };
+    },
   },
   notifications: {
     myNotifications: (limit = 10) => apiRequest(`/notifications/mine?limit=${limit}`),

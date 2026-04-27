@@ -60,6 +60,14 @@ function cleanInsightList(values) {
     .filter(Boolean);
 }
 
+const BREAKDOWN_MAX = {
+  semantic: 30,
+  tags: 25,
+  text: 15,
+  experience: 15,
+  location: 15,
+};
+
 export default function RecruiterCvScreeningPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [jobs, setJobs] = useState([]);
@@ -75,6 +83,7 @@ export default function RecruiterCvScreeningPage() {
   const [selectedResumeId, setSelectedResumeId] = useState(null);
   const [shortlistedIds, setShortlistedIds] = useState([]);
   const [shortlistBusyId, setShortlistBusyId] = useState(null);
+  const [notesExpanded, setNotesExpanded] = useState(false);
 
   const selectedJobId = Number(searchParams.get("job") || 0) || null;
 
@@ -438,6 +447,8 @@ export default function RecruiterCvScreeningPage() {
                   const band = scoreBand(Number(item.score || 0));
                   const selected = selectedResumeId === resume.id;
                   const shortlisted = shortlistedIds.includes(item.application_id);
+                  const breakdown = item.breakdown_normalized || item.breakdown || {};
+                  const breakdownRaw = item.breakdown_raw || {};
                   return (
                     <article
                       key={resume.id}
@@ -471,10 +482,11 @@ export default function RecruiterCvScreeningPage() {
                       </div>
 
                       <div className="cv-screening-breakdown">
-                        {Object.entries(item.breakdown || {}).map(([key, value]) => (
+                        {Object.entries(breakdown).map(([key, value]) => (
                           <div key={key}>
                             <span>{key}</span>
                             <strong>{Number(value || 0).toFixed(1)}</strong>
+                            {/* raw details removed per UX request */}
                           </div>
                         ))}
                       </div>
@@ -558,31 +570,33 @@ export default function RecruiterCvScreeningPage() {
           </section>
 
           <section className="rw-card cv-screening-card">
-            <h3 className="cv-screening-card-title">Lưu ý phân tích</h3>
-            <div className="cv-screening-notes">
-              <div>
-                <strong>Điểm cao</strong>
-                <span>Ưu tiên mời phỏng vấn.</span>
-              </div>
-              <div>
-                <strong>Nút Ưu tiên</strong>
-                <span>Lưu hồ sơ vào danh sách ứng viên nổi bật của tin tuyển dụng và giữ lại sau khi tải lại trang.</span>
-              </div>
-              <div>
-                <strong>Điểm trung bình</strong>
-                <span>Đọc kỹ tóm tắt và kinh nghiệm.</span>
-              </div>
-              <div>
-                <strong>Điểm thấp</strong>
-                <span>Đối chiếu lại thẻ kỹ năng và cấp độ kinh nghiệm.</span>
-              </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 className="cv-screening-card-title">Lưu ý phân tích</h3>
+              <button type="button" className="rw-link" onClick={() => setNotesExpanded((v) => !v)}>
+                {notesExpanded ? "Đóng hướng dẫn" : "Xem hướng dẫn"}
+              </button>
             </div>
-            <div style={{ marginTop: "1rem" }}>
-              <div className="cv-screening-detail-block">
-                <span>Kỹ năng nổi bật</span>
-                <p>{skillInsights.length ? skillInsights.map((item) => `${item.name} (${item.count})`).join(", ") : "Chưa có dữ liệu"}</p>
+            {notesExpanded ? (
+              <div className="cv-screening-notes">
+                <div>
+                  <strong>Điểm cao</strong>
+                  <span>Ưu tiên mời phỏng vấn.</span>
+                </div>
+                <div>
+                  <strong>Nút Ưu tiên</strong>
+                  <span>Lưu hồ sơ vào danh sách ứng viên nổi bật của tin tuyển dụng và giữ lại sau khi tải lại trang.</span>
+                </div>
+                <div>
+                  <strong>Điểm trung bình</strong>
+                  <span>Đọc kỹ tóm tắt và kinh nghiệm.</span>
+                </div>
+                <div>
+                  <strong>Điểm thấp</strong>
+                  <span>Đối chiếu lại thẻ kỹ năng và cấp độ kinh nghiệm.</span>
+                </div>
               </div>
-            </div>
+            ) : null}
+          
           </section>
         </aside>
       </div>
