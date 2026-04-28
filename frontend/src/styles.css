@@ -6564,15 +6564,6 @@ ul { padding-left:18px; color:var(--muted); }
   gap: 10px;
 }
 
-.recruiter-editor-checklist {
-  margin: 0;
-  padding-left: 18px;
-  color: #475569;
-  line-height: 1.75;
-  display: grid;
-  gap: 8px;
-}
-
 .rw-btn-outline-lg, .rw-btn-outline, .rw-btn-danger, .btn {
   white-space: nowrap;
 }
@@ -7756,6 +7747,13 @@ ul { padding-left:18px; color:var(--muted); }
   color: #0f172a;
 }
 
+.cv-screening-breakdown small {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
 .cv-screening-result-actions {
   display: flex;
   flex-wrap: wrap;
@@ -8843,7 +8841,7 @@ ul { padding-left:18px; color:var(--muted); }
   left: -20000px;
   top: 0;
   width: 794px;
-  opacity: 0;
+  opacity: 1;
   pointer-events: none;
   background: #ffffff;
   z-index: -1;
@@ -8863,6 +8861,19 @@ ul { padding-left:18px; color:var(--muted); }
   border-radius: 0;
   border: 0;
   box-shadow: none;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+.rw-pdf-export-sheet .cv-template,
+.rw-pdf-export-sheet .cv-template *,
+.rw-pdf-export-sheet .cv-template *::before,
+.rw-pdf-export-sheet .cv-template *::after {
+  animation: none !important;
+  transition: none !important;
 }
 
 .rw-pdf-export-sheet .cv-pre-wrap,

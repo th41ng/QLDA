@@ -95,8 +95,8 @@ export default function RecruiterDashboardPage() {
     <section className="dashboard-page">
       <div className="dashboard-hero">
         <div>
-          <span className="eyebrow">Recruiter workspace</span>
-          <h1>Dashboard nhà tuyển dụng</h1>
+          <span className="eyebrow">Không gian nhà tuyển dụng</span>
+          <h1>Trang chủ Nhà tuyển dụng</h1>
           <p>Theo dõi tin tuyển dụng, ứng viên và thông tin công ty của bạn tại một nơi.</p>
         </div>
         <div className="dashboard-hero-meta">
@@ -270,7 +270,7 @@ function JobRowCard({ job, applicantCount, onStatusChange, isOpen }) {
         <div className="dashboard-row-meta">
           <span>{applicantCount} ứng viên</span>
           <span>{formatDate(job.created_at)}</span>
-          <span>{job.workplace_type || "onsite"}</span>
+          <span>{job.workplace_type || "Tại văn phòng"}</span>
         </div>
       </div>
       <div className="dashboard-row-actions">
@@ -307,7 +307,7 @@ function ApplicantRowCard({ application }) {
         </div>
         <div className="dashboard-row-meta">
           <span>{formatDate(application.applied_at)}</span>
-          <span>{application.resume?.title || "CV online"}</span>
+          <span>{application.resume?.title || "CV trực tuyến"}</span>
         </div>
       </div>
       <div className="dashboard-row-actions">
@@ -332,7 +332,7 @@ function CompanySummary({ company }) {
     <div className="company-summary">
       <div className="company-summary-head">
         <div className="company-summary-logo">
-          {company?.logo_url ? <img src={company.logo_url} alt={company.company_name || "Company logo"} /> : <span>{getInitials(company?.company_name)}</span>}
+          {company?.logo_url ? <img src={company.logo_url} alt={company.company_name || "Logo công ty"} /> : <span>{getInitials(company?.company_name)}</span>}
         </div>
         <div>
           <strong>{company?.company_name || "Chưa có thông tin công ty"}</strong>

@@ -23,6 +23,17 @@ function getParagraphs(value) {
     .filter(Boolean);
 }
 
+function genderLabel(value) {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (!normalized) return "";
+  if (normalized === "male") return "Nam";
+  if (normalized === "female") return "Nữ";
+  if (normalized === "other") return "Khác";
+  return String(value).trim();
+}
+
 export default function ModernBlueTemplate({ data = {} }) {
   const skills = getList(data.skills);
   const expBlocks = getParagraphs(data.experience);
@@ -30,7 +41,7 @@ export default function ModernBlueTemplate({ data = {} }) {
   const hasAdditionalInfo = Boolean(String(data.additional_info ?? "").trim());
   const contact = [
     { label: "Ngày sinh", value: data.dob },
-    { label: "Giới tính", value: data.gender },
+    { label: "Giới tính", value: genderLabel(data.gender) },
     { label: "Số điện thoại", value: data.phone },
     { label: "Email", value: data.email },
     { label: "Địa chỉ", value: data.address },

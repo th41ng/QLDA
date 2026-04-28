@@ -94,7 +94,7 @@ export default function RecruiterCompanyPage() {
           <div className="company-summary">
             <div className="company-summary-head">
               <div className="company-summary-logo">
-                {company?.logo_url ? <img src={company.logo_url} alt={company.company_name || "Company logo"} /> : <span>{getInitials(company?.company_name)}</span>}
+                {company?.logo_url ? <img src={company.logo_url} alt={company.company_name || "Logo cong ty"} /> : <span>{getInitials(company?.company_name)}</span>}
               </div>
               <div>
                 <strong>{company.company_name || "Chưa có tên công ty"}</strong>
@@ -133,7 +133,7 @@ function Row({ label, value }) {
 }
 
 function getInitials(name) {
-  const raw = (name || "JOB").trim();
+  const raw = (name || "CTY").trim();
   return raw
     .split(/\s+/)
     .slice(0, 2)

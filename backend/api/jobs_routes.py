@@ -7,8 +7,8 @@ from sqlalchemy.orm import selectinload
 from . import json_error, json_ok, role_required
 from ..core.extensions import db
 from ..core.security import slugify
-from ..core.services.matching_service import score_resume_for_job
-from ..models import Application, Company, JobPosting, Tag
+from ..core.services.matching_service import screen_resume_for_job_with_ai
+from ..models import Application, Company, JobPosting, Resume, Tag
 
 api_jobs_bp = Blueprint("api_jobs", __name__)
 
@@ -78,7 +78,41 @@ def _resume_for_screening(resume):
         "structured_json": resume.structured_json or {},
         "candidate_name": resume.user.full_name if resume.user else None,
         "tags": [_tag_to_dict(tag) for tag in (resume.tags or [])],
+        "updated_at": resume.updated_at.isoformat() if resume.updated_at else None,
     }
+
+
+def _screen_results_for_job(job: JobPosting, include_debug: bool = False):
+    applications = (
+        Application.query.options(
+            selectinload(Application.resume).selectinload(Resume.tags),
+            selectinload(Application.resume).selectinload(Resume.user),
+        )
+        .filter(Application.job_id == job.id)
+        .all()
+    )
+
+    results = []
+    for app in applications:
+        if not app.resume:
+            continue
+        scored = screen_resume_for_job_with_ai(app.resume, job)
+        payload = {
+            "application_id": app.id,
+            "score": scored.get("score", 0),
+            "breakdown": scored.get("breakdown", {}),
+            "breakdown_normalized": scored.get("breakdown_normalized", scored.get("breakdown", {})),
+            "breakdown_raw": scored.get("breakdown_raw", {}),
+            "insights": scored.get("insights", {}),
+            "engine": scored.get("engine", {}),
+            "resume": _resume_for_screening(app.resume),
+        }
+        if include_debug:
+            payload["debug"] = scored.get("debug", {})
+        results.append(payload)
+
+    results.sort(key=lambda item: item["score"], reverse=True)
+    return results
 
 
 @api_jobs_bp.get("")
@@ -234,28 +268,31 @@ def screen_job_resumes(job_id):
     if not job:
         return json_error("Job not found.", 404)
 
-    applications = (
-        Application.query.options(
-            selectinload(Application.resume).selectinload("tags"),
-            selectinload(Application.resume).selectinload("user"),
-        )
-        .filter(Application.job_id == job.id)
-        .all()
-    )
-
-    results = []
-    for app in applications:
-        if not app.resume:
-            continue
-        scored = score_resume_for_job(app.resume, job)
-        results.append(
-            {
-                "application_id": app.id,
-                "score": scored.get("score", 0),
-                "breakdown": scored.get("breakdown", {}),
-                "resume": _resume_for_screening(app.resume),
-            }
-        )
-
-    results.sort(key=lambda item: item["score"], reverse=True)
+    include_debug = (request.args.get("debug") or "").strip().lower() in {"1", "true", "yes"}
+    results = _screen_results_for_job(job, include_debug=include_debug)
     return json_ok(results)
+
+
+@api_jobs_bp.get("/<int:job_id>/screen/debug")
+@jwt_required()
+@role_required("recruiter", "admin")
+def screen_job_resumes_debug(job_id):
+    user_id = int(get_jwt_identity())
+    job = JobPosting.query.options(selectinload(JobPosting.tags)).filter_by(id=job_id, recruiter_user_id=user_id).first()
+    if not job:
+        return json_error("Job not found.", 404)
+
+    results = _screen_results_for_job(job, include_debug=True)
+    return json_ok(
+        {
+            "job": {
+                "id": job.id,
+                "title": job.title,
+                "experience_level": job.experience_level,
+                "location": job.location,
+                "tag_count": len(job.tags or []),
+                "tags": [_tag_to_dict(tag) for tag in (job.tags or [])],
+            },
+            "results": results,
+        }
+    )

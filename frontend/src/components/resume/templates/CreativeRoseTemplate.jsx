@@ -250,6 +250,17 @@ function list(value) {
     .filter(Boolean);
 }
 
+function genderLabel(value) {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (!normalized) return "";
+  if (normalized === "male") return "Nam";
+  if (normalized === "female") return "Nữ";
+  if (normalized === "other") return "Khác";
+  return String(value).trim();
+}
+
 export default function CreativeRoseTemplate({ data = {} }) {
   const skills = list(data.skills);
 
@@ -261,7 +272,7 @@ export default function CreativeRoseTemplate({ data = {} }) {
 
   const personalInfo = [
     { label: "Ngày sinh", value: data.dob },
-    { label: "Giới tính", value: data.gender },
+    { label: "Giới tính", value: genderLabel(data.gender) },
     { label: "Địa điểm", value: data.address },
     { label: "Khu vực", value: data.desired_location },
     { label: "Mức lương", value: data.desired_salary || data.expected_salary },
