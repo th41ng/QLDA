@@ -9,6 +9,8 @@ from .statistics_routes import api_statistics_bp
 from .tags_routes import api_tags_bp
 from .users_routes import api_users_bp
 
+API_ROOT_PREFIX = "/api"
+
 API_PREFIXES = {
     "applications": "/api/applications",
     "auth": "/api/auth",
@@ -38,4 +40,11 @@ API_BLUEPRINTS = (
 
 def register_api_blueprints(app):
     for blueprint, prefix in API_BLUEPRINTS:
-        app.register_blueprint(blueprint, url_prefix=prefix)
+        normalized = str(prefix or "").strip()
+        if not normalized.startswith("/"):
+            normalized = f"/{normalized}"
+        if not normalized.startswith(API_ROOT_PREFIX + "/") and normalized != API_ROOT_PREFIX:
+            # Ensure all API routes live under /api
+            normalized = f"{API_ROOT_PREFIX}{normalized}"
+
+        app.register_blueprint(blueprint, url_prefix=normalized)
