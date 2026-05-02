@@ -90,4 +90,3 @@ def _build_frontend_origins(primary_origin, extra_origins=None):
             origins.add(f"http://{host}:{port}")
 
     return sorted(origins)
-
