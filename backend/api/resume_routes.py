@@ -19,6 +19,7 @@ from ..core.services.cv_service import (
 )
 from ..services.storage_service import upload_file
 from ..core.services.cv_parser_service import parse_cv_to_structured
+from ..core.services.matching_service import recommend_jobs_for_resume
 
 api_resumes_bp = Blueprint("api_resumes", __name__)
 
@@ -579,7 +580,6 @@ def export_resume(resume_id):
 def recommendations():
     user = _current_user()
     resumes = Resume.query.filter_by(user_id=user.id).all()
-    from ..core.services.matching_service import recommend_jobs_for_resume
     recommendations_data = []
     for resume in resumes:
         for score, job, breakdown in recommend_jobs_for_resume(resume):

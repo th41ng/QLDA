@@ -34,7 +34,7 @@ export default function LandingPage() {
     ])
       .then(([jobData, tagData, companyData]) => {
         if (!active) return;
-        setJobs(Array.isArray(jobData) ? jobData : []);
+        setJobs(Array.isArray(jobData?.items) ? jobData.items : Array.isArray(jobData) ? jobData : []);
         setIndustryTags(Array.isArray(tagData) ? tagData : []);
         setCompanies(Array.isArray(companyData?.companies) ? companyData.companies : []);
       })

@@ -144,12 +144,12 @@ export default function ResumeForm({
       </section>
 
       <div className="rw-form-actions">
-        <button type="button" className="rw-btn-outline-lg" onClick={onSaveDraft}>
+        {/* <button type="button" className="rw-btn-outline-lg" onClick={onSaveDraft}>
           Lưu nháp
         </button>
         <button type="button" className="rw-btn-preview" onClick={onPreview}>
           Xem trước
-        </button>
+        </button> */}
         <button type="submit" className="btn" disabled={saving}>
           {saving ? "Đang lưu..." : submitLabel || "Tạo / cập nhật CV"}
         </button>

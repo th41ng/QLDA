@@ -1,7 +1,7 @@
 from pathlib import Path
 from urllib.parse import urlparse
-from flask import Flask
-from sqlalchemy import inspect, text
+from flask import Flask, redirect, url_for
+from flask_login import current_user
 
 from .api.registry import register_api_blueprints
 from .web.registry import register_web_blueprints
@@ -35,12 +35,13 @@ def create_app():
 
     @app.route("/")
     def index():
-        return {"ok": True, "message": "Auth API is running"}
+        if current_user.is_authenticated:
+            return redirect(url_for("admin.dashboard"))
+        return redirect(url_for("admin.login"))
 
     with app.app_context():
         Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
         db.create_all()
-        _ensure_otp_schema()
         if app.config.get("EMBEDDING_WARMUP_ON_START", True):
             warmup_status = warmup_embedding_model()
             if warmup_status.get("ready"):
@@ -90,24 +91,3 @@ def _build_frontend_origins(primary_origin, extra_origins=None):
 
     return sorted(origins)
 
-
-def _ensure_otp_schema():
-    inspector = inspect(db.engine)
-    if "otp_codes" not in inspector.get_table_names():
-        return
-
-    columns = {column["name"] for column in inspector.get_columns("otp_codes")}
-    statements = []
-    if "resend_available_at" not in columns:
-        statements.append(
-            "ALTER TABLE otp_codes ADD COLUMN resend_available_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-        )
-    if "max_attempts" not in columns:
-        statements.append("ALTER TABLE otp_codes ADD COLUMN max_attempts INT NOT NULL DEFAULT 5")
-    if "request_ip" not in columns:
-        statements.append("ALTER TABLE otp_codes ADD COLUMN request_ip VARCHAR(64)")
-
-    for statement in statements:
-        db.session.execute(text(statement))
-    if statements:
-        db.session.commit()

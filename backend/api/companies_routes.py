@@ -6,24 +6,26 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from . import json_error, json_ok, role_required
 from ..core.extensions import db
-from ..models import CandidateCompanyFollow, Company, JobPosting
+from ..models import CandidateCompanyFollow, Company, JobPosting, Tag
+from ..schemas import tag_to_dict
 
 api_companies_bp = Blueprint("api_companies", __name__)
 
 
-def _tag_to_dict(tag):
-    return {
-        "id": tag.id,
-        "name": tag.name,
-        "slug": tag.slug,
-        "category": tag.category.slug if tag.category else None,
-        "category_name": tag.category.name if tag.category else None,
-    }
-
-
 def _published_jobs(company: Company):
-    jobs = [job for job in (company.jobs or []) if job.status == "published"]
-    return sorted(jobs, key=lambda job: job.published_at or job.created_at, reverse=True)
+    return (
+        JobPosting.query
+        .options(selectinload(JobPosting.tags))
+        .filter(
+            JobPosting.company_id == company.id,
+            JobPosting.status == "published",
+        )
+        .order_by(
+            JobPosting.published_at.desc(),
+            JobPosting.created_at.desc(),
+        )
+        .all()
+    )
 
 
 def _job_to_summary(job: JobPosting):
@@ -40,7 +42,7 @@ def _job_to_summary(job: JobPosting):
         "deadline": job.deadline.isoformat() if job.deadline else None,
         "created_at": job.created_at.isoformat() if job.created_at else None,
         "published_at": job.published_at.isoformat() if job.published_at else None,
-        "tags": [_tag_to_dict(tag) for tag in (job.tags or [])],
+        "tags": [tag_to_dict(tag) for tag in (job.tags or [])],
     }
 
 
@@ -108,7 +110,6 @@ def featured_companies():
             func.count(JobPosting.id).label("active_jobs_count"),
             func.coalesce(func.sum(JobPosting.vacancy_count), 0).label("openings"),
         )
-        .options(selectinload(Company.jobs).selectinload(JobPosting.tags))
         .outerjoin(
             JobPosting,
             (JobPosting.company_id == Company.id) & (JobPosting.status == "published"),
@@ -147,11 +148,7 @@ def featured_companies():
 @role_required("recruiter", "admin")
 def company_me():
     user_id = int(get_jwt_identity())
-    company = (
-        Company.query.options(selectinload(Company.jobs).selectinload(JobPosting.tags))
-        .filter_by(recruiter_user_id=user_id)
-        .first()
-    )
+    company = Company.query.filter_by(recruiter_user_id=user_id).first()
     return json_ok(_company_to_dict(company) if company else None)
 
 
@@ -186,8 +183,6 @@ def followed_companies():
     follows = (
         CandidateCompanyFollow.query.options(
             selectinload(CandidateCompanyFollow.company)
-            .selectinload(Company.jobs)
-            .selectinload(JobPosting.tags)
         )
         .filter_by(candidate_user_id=user_id)
         .order_by(CandidateCompanyFollow.created_at.desc())

@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import { ROUTES } from "../routes";
 
 const PAGE_SIZE = 6;
+const DEBOUNCE_MS = 400;
 const MIN_SUITABLE_MATCH_SCORE = 55;
 const SORT_OPTIONS = [
   { value: "featured", label: "Nổi bật trước" },
@@ -27,46 +28,41 @@ const DEFAULT_FILTERS = {
   sort: "featured",
 };
 
+const EMPTY_OPTIONS = { locations: [], experiences: [], workplaces: [], employments: [], industries: [], tags: [] };
+
 export default function JobsPage() {
   const { user } = useAuth();
   const location = useLocation();
   const initialQuery = useMemo(() => new URLSearchParams(location.search).get("q") || "", [location.search]);
+
+  const [filterOptions, setFilterOptions] = useState(EMPTY_OPTIONS);
   const [jobs, setJobs] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ ...DEFAULT_FILTERS, q: initialQuery });
   const [page, setPage] = useState(1);
-  const [recommendations, setRecommendations] = useState([]);
+  const [debouncedQ, setDebouncedQ] = useState(initialQuery);
+
+  const [enrichedRecommendations, setEnrichedRecommendations] = useState([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [recommendationsError, setRecommendationsError] = useState("");
   const [hasResume, setHasResume] = useState(false);
 
   useEffect(() => {
-    let active = true;
-
-    Promise.all([api.jobs.list("?status=published"), api.tags.categories()])
-      .then(([jobData, categoryData]) => {
-        if (!active) return;
-        setJobs(Array.isArray(jobData) ? jobData : []);
-        setCategories(Array.isArray(categoryData) ? categoryData : []);
-      })
-      .catch(() => {
-        if (!active) return;
-        setJobs([]);
-        setCategories([]);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
+    api.jobs.filterOptions()
+      .then((data) => { if (data && typeof data === "object") setFilterOptions({ ...EMPTY_OPTIONS, ...data }); })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(filters.q), DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [filters.q]);
+
+  useEffect(() => {
     setPage(1);
-  }, [filters]);
+  }, [filters.location, filters.industry, filters.experience, filters.workplace, filters.employment, filters.tag, filters.sort, debouncedQ]);
 
   useEffect(() => {
     setFilters((current) => {
@@ -76,8 +72,42 @@ export default function JobsPage() {
   }, [initialQuery]);
 
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+
+    api.jobs.list({
+      status: "published",
+      q: debouncedQ,
+      location: filters.location,
+      industry: filters.industry,
+      experience: filters.experience,
+      workplace: filters.workplace,
+      employment: filters.employment,
+      tag: filters.tag,
+      sort: filters.sort,
+      page,
+      per_page: PAGE_SIZE,
+    })
+      .then((data) => {
+        if (!active) return;
+        setJobs(Array.isArray(data?.items) ? data.items : []);
+        setTotal(Number(data?.total) || 0);
+        setTotalPages(Number(data?.total_pages) || 1);
+      })
+      .catch(() => {
+        if (!active) return;
+        setJobs([]);
+        setTotal(0);
+        setTotalPages(1);
+      })
+      .finally(() => { if (active) setLoading(false); });
+
+    return () => { active = false; };
+  }, [debouncedQ, filters.location, filters.industry, filters.experience, filters.workplace, filters.employment, filters.tag, filters.sort, page]);
+
+  useEffect(() => {
     if (user?.role !== "candidate") {
-      setRecommendations([]);
+      setEnrichedRecommendations([]);
       setRecommendationsLoading(false);
       setRecommendationsError("");
       setHasResume(false);
@@ -89,153 +119,55 @@ export default function JobsPage() {
     setRecommendationsError("");
 
     Promise.all([api.resumes.recommendations(), api.resumes.list().catch(() => [])])
-      .then(([recommendationData, resumesData]) => {
+      .then(async ([recommendationData, resumesData]) => {
         if (!active) return;
-        setRecommendations(Array.isArray(recommendationData) ? recommendationData : []);
         setHasResume(Array.isArray(resumesData) && resumesData.length > 0);
+
+        const recs = Array.isArray(recommendationData) ? recommendationData : [];
+        const bestByJob = new Map();
+        recs.forEach((item) => {
+          const jobId = Number(item.job_id);
+          const score = Number(item.score || 0);
+          const curr = bestByJob.get(jobId);
+          if (!curr || score > curr.score) bestByJob.set(jobId, item);
+        });
+        const topItems = [...bestByJob.values()].sort((a, b) => b.score - a.score).slice(0, 3);
+
+        const jobDetails = await Promise.all(
+          topItems.map((item) => api.jobs.detail(item.job_id).catch(() => null))
+        );
+
+        if (!active) return;
+        const enriched = topItems
+          .map((item, i) => jobDetails[i] ? ({
+            ...jobDetails[i],
+            match_score: item.score,
+            match_breakdown: item.breakdown || {},
+            resume_id: item.resume_id,
+          }) : null)
+          .filter(Boolean);
+
+        setEnrichedRecommendations(enriched);
       })
       .catch((error) => {
         if (!active) return;
-        setRecommendations([]);
+        setEnrichedRecommendations([]);
         setRecommendationsError(error?.message || "Không thể tải gợi ý phù hợp lúc này.");
         setHasResume(false);
       })
-      .finally(() => {
-        if (active) setRecommendationsLoading(false);
-      });
+      .finally(() => { if (active) setRecommendationsLoading(false); });
 
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [user?.id, user?.role]);
 
-  const locations = useMemo(
-    () => [...new Set(jobs.map((job) => job.location).filter(Boolean))].sort((left, right) => left.localeCompare(right)),
-    [jobs],
-  );
-
-  const experiences = useMemo(
-    () => [...new Set(jobs.map((job) => job.experience_level).filter(Boolean))].sort((left, right) => left.localeCompare(right)),
-    [jobs],
-  );
-
-  const workplaces = useMemo(
-    () => [...new Set(jobs.map((job) => job.workplace_type).filter(Boolean))].sort((left, right) => left.localeCompare(right)),
-    [jobs],
-  );
-
-  const employmentTypes = useMemo(
-    () => [...new Set(jobs.map((job) => job.employment_type).filter(Boolean))].sort((left, right) => left.localeCompare(right)),
-    [jobs],
-  );
-
-  const tagOptions = useMemo(() => {
-    const map = new Map();
-    jobs.forEach((job) => {
-      (job.tags || []).forEach((tag) => {
-        if (!map.has(tag.slug)) {
-          map.set(tag.slug, { ...tag, count: 0 });
-        }
-        map.get(tag.slug).count += 1;
-      });
-    });
-    return [...map.values()].sort((left, right) => right.count - left.count).slice(0, 12);
-  }, [jobs]);
-
-  const industryOptions = useMemo(() => {
-    const map = new Map();
-    jobs.forEach((job) => {
-      (job.tags || []).forEach((tag) => {
-        if (tag.category === "industry" && !map.has(tag.slug)) {
-          map.set(tag.slug, { value: tag.slug, label: tag.name });
-        }
-      });
-    });
-    return [...map.values()].sort((left, right) => left.label.localeCompare(right.label));
-  }, [jobs]);
-
-  const filteredJobs = useMemo(() => {
-    return jobs.filter((job) => {
-      const companyName = job.company?.company_name || job.company || "";
-      const tags = (job.tags || []).map((tag) => tag.name).join(" ");
-      const haystack = normalizeText(
-        [job.title, job.summary, job.description, job.requirements, job.location, job.experience_level, companyName, tags].join(" "),
-      );
-      const query = normalizeText(filters.q);
-      const matchesQuery = !query || haystack.includes(query);
-      const matchesLocation = !filters.location || normalizeText(job.location || "") === normalizeText(filters.location);
-      const matchesExperience = !filters.experience || normalizeText(job.experience_level || "").includes(normalizeText(filters.experience));
-      const matchesWorkplace = !filters.workplace || normalizeText(job.workplace_type || "").includes(normalizeText(filters.workplace));
-      const matchesEmployment = !filters.employment || normalizeText(job.employment_type || "").includes(normalizeText(filters.employment));
-      const matchesIndustry = !filters.industry || (job.tags || []).some((tag) => tag.slug === filters.industry && tag.category === "industry");
-      const matchesTag = !filters.tag || (job.tags || []).some((tag) => tag.slug === filters.tag);
-
-      return matchesQuery && matchesLocation && matchesExperience && matchesWorkplace && matchesEmployment && matchesIndustry && matchesTag;
-    });
-  }, [filters, jobs]);
-
-  const sortedJobs = useMemo(() => {
-    const list = [...filteredJobs];
-    const salaryValue = (job) => Number(job.salary_max || job.salary_min || 0);
-    list.sort((left, right) => {
-      if (filters.sort === "newest") {
-        return new Date(right.created_at || 0) - new Date(left.created_at || 0);
-      }
-      if (filters.sort === "salary_desc") {
-        return salaryValue(right) - salaryValue(left);
-      }
-      if (filters.sort === "salary_asc") {
-        return salaryValue(left) - salaryValue(right);
-      }
-      const featured = Number(right.is_featured) - Number(left.is_featured);
-      if (featured !== 0) return featured;
-      return new Date(right.created_at || 0) - new Date(left.created_at || 0);
-    });
-    return list;
-  }, [filteredJobs, filters.sort]);
-
-  const recommendedJobs = useMemo(() => {
-    if (!recommendations.length || !jobs.length) return [];
-
-    const jobsById = new Map(jobs.map((job) => [Number(job.id), job]));
-    const bestMatches = new Map();
-
-    recommendations.forEach((item) => {
-      const jobId = Number(item.job_id);
-      const job = jobsById.get(jobId);
-      if (!job) return;
-
-      const score = Number(item.score || 0);
-      const current = bestMatches.get(jobId);
-      if (!current || score > current.match_score) {
-        bestMatches.set(jobId, {
-          ...job,
-          match_score: score,
-          match_breakdown: item.breakdown || {},
-          resume_id: item.resume_id,
-        });
-      }
-    });
-
-    return [...bestMatches.values()]
-      .sort((left, right) => {
-        const scoreDiff = Number(right.match_score || 0) - Number(left.match_score || 0);
-        if (scoreDiff !== 0) return scoreDiff;
-        const featured = Number(right.is_featured) - Number(left.is_featured);
-        if (featured !== 0) return featured;
-        return new Date(right.created_at || 0) - new Date(left.created_at || 0);
-      })
-      .slice(0, 3);
-  }, [jobs, recommendations]);
-
   const suitableRecommendedJobs = useMemo(
-    () => recommendedJobs.filter((job) => Number(job.match_score || 0) >= MIN_SUITABLE_MATCH_SCORE),
-    [recommendedJobs],
+    () => enrichedRecommendations.filter((job) => Number(job.match_score || 0) >= MIN_SUITABLE_MATCH_SCORE),
+    [enrichedRecommendations],
   );
 
   const referenceRecommendedJobs = useMemo(
-    () => recommendedJobs.filter((job) => Number(job.match_score || 0) < MIN_SUITABLE_MATCH_SCORE),
-    [recommendedJobs],
+    () => enrichedRecommendations.filter((job) => Number(job.match_score || 0) < MIN_SUITABLE_MATCH_SCORE),
+    [enrichedRecommendations],
   );
 
   const recommendationMode = suitableRecommendedJobs.length ? "suitable" : "reference";
@@ -248,9 +180,7 @@ export default function JobsPage() {
     return [...suitableItems, ...referenceItems];
   }, [referenceRecommendedJobs, suitableRecommendedJobs]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedJobs.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const pageJobs = sortedJobs.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const activeFilterCount = Object.entries(filters).filter(([key, value]) => key !== "sort" && Boolean(value)).length;
   const showRecommendations = user?.role === "candidate";
 
@@ -270,15 +200,15 @@ export default function JobsPage() {
         </div>
         <div className="jobs-hero-metrics">
           <article>
-            <strong>{loading ? <Skeleton className="skeleton-line" width="72px" height="20px" /> : sortedJobs.length}</strong>
+            <strong>{loading ? <Skeleton className="skeleton-line" width="72px" height="20px" /> : total}</strong>
             <span>Việc làm phù hợp</span>
           </article>
           <article>
-            <strong>{loading ? <Skeleton className="skeleton-line" width="72px" height="20px" /> : industryOptions.length}</strong>
+            <strong>{loading ? <Skeleton className="skeleton-line" width="72px" height="20px" /> : filterOptions.industries.length}</strong>
             <span>Ngành nghề</span>
           </article>
           <article>
-            <strong>{loading ? <Skeleton className="skeleton-line" width="72px" height="20px" /> : tagOptions.length}</strong>
+            <strong>{loading ? <Skeleton className="skeleton-line" width="72px" height="20px" /> : filterOptions.tags.length}</strong>
             <span>Kỹ năng nổi bật</span>
           </article>
         </div>
@@ -311,9 +241,9 @@ export default function JobsPage() {
               <span>Địa điểm</span>
               <select value={filters.location} onChange={(event) => updateFilter("location", event.target.value)}>
                 <option value="">Tất cả địa điểm</option>
-                {locations.map((location) => (
-                  <option key={location} value={location}>
-                    {location}
+                {filterOptions.locations.map((loc) => (
+                  <option key={loc} value={loc}>
+                    {loc}
                   </option>
                 ))}
               </select>
@@ -323,7 +253,7 @@ export default function JobsPage() {
               <span>Ngành nghề</span>
               <select value={filters.industry} onChange={(event) => updateFilter("industry", event.target.value)}>
                 <option value="">Tất cả ngành nghề</option>
-                {industryOptions.map((item) => (
+                {filterOptions.industries.map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.label}
                   </option>
@@ -335,9 +265,9 @@ export default function JobsPage() {
               <span>Kinh nghiệm</span>
               <select value={filters.experience} onChange={(event) => updateFilter("experience", event.target.value)}>
                 <option value="">Tất cả mức</option>
-                {experiences.map((experience) => (
-                  <option key={experience} value={experience}>
-                    {experience}
+                {filterOptions.experiences.map((exp) => (
+                  <option key={exp} value={exp}>
+                    {exp}
                   </option>
                 ))}
               </select>
@@ -347,9 +277,9 @@ export default function JobsPage() {
               <span>Hình thức</span>
               <select value={filters.workplace} onChange={(event) => updateFilter("workplace", event.target.value)}>
                 <option value="">Tất cả</option>
-                {workplaces.map((workplace) => (
-                  <option key={workplace} value={workplace}>
-                    {workplace}
+                {filterOptions.workplaces.map((wp) => (
+                  <option key={wp} value={wp}>
+                    {wp}
                   </option>
                 ))}
               </select>
@@ -359,9 +289,9 @@ export default function JobsPage() {
               <span>Loại hình</span>
               <select value={filters.employment} onChange={(event) => updateFilter("employment", event.target.value)}>
                 <option value="">Tất cả</option>
-                {employmentTypes.map((employment) => (
-                  <option key={employment} value={employment}>
-                    {employment}
+                {filterOptions.employments.map((emp) => (
+                  <option key={emp} value={emp}>
+                    {emp}
                   </option>
                 ))}
               </select>
@@ -371,7 +301,7 @@ export default function JobsPage() {
           <div className="jobs-filter-section">
             <h3>Kỹ năng nổi bật</h3>
             <div className="jobs-tag-list">
-              {tagOptions.map((tag) => (
+              {filterOptions.tags.map((tag) => (
                 <button
                   key={tag.slug}
                   type="button"
@@ -517,7 +447,7 @@ export default function JobsPage() {
           <div className="jobs-toolbar panel">
             <div>
               <span className="eyebrow">Kết quả</span>
-              <h2>{loading ? "Đang tải việc làm..." : `${sortedJobs.length} tin tuyển dụng`}</h2>
+              <h2>{loading ? "Đang tải việc làm..." : `${total} tin tuyển dụng`}</h2>
               {activeFilterCount ? <p>{`Đang áp dụng ${activeFilterCount} bộ lọc.`}</p> : null}
             </div>
 
@@ -541,10 +471,10 @@ export default function JobsPage() {
                 <SkeletonJobCard key={index} />
               ))}
             </div>
-          ) : pageJobs.length ? (
+          ) : jobs.length ? (
             <>
               <div className="jobs-results-grid">
-                {pageJobs.map((job) => (
+                {jobs.map((job) => (
                   <LandingJobCard key={job.id} job={job} />
                 ))}
               </div>
@@ -593,14 +523,6 @@ export default function JobsPage() {
       </div>
     </div>
   );
-}
-
-function normalizeText(value) {
-  return stripDiacritics(String(value || "").toLowerCase().trim());
-}
-
-function stripDiacritics(value) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 function getCompanyInitial(name) {

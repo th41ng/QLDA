@@ -96,7 +96,7 @@ export default function JobDetailPage() {
     api.jobs.list(`?${params.toString()}`)
       .then((data) => {
         if (!mounted) return;
-        const list = Array.isArray(data) ? data : [];
+        const list = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
         setRelatedJobs(list.filter((j) => String(j.id) !== String(id)).slice(0, 4));
       })
       .catch(() => {})

@@ -40,7 +40,7 @@ class TestCreateApplicationRoute:
 
     def test_create_application_rejects_duplicate_submission(self, app, monkeypatch):
         user_id = 10
-        job = Mock(id=99, status="published")
+        job = Mock(id=99, status="published", deadline=None)
         resume = Mock(id=15)
 
         monkeypatch.setattr(ar, "get_jwt_identity", lambda: str(user_id))
@@ -65,7 +65,7 @@ class TestCreateApplicationRoute:
 
     def test_create_application_success(self, app, monkeypatch):
         user_id = 10
-        job = Mock(id=99, status="published")
+        job = Mock(id=99, status="published", deadline=None)
         resume = Mock(id=15)
 
         monkeypatch.setattr(ar, "get_jwt_identity", lambda: str(user_id))

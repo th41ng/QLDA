@@ -3,8 +3,7 @@
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from . import json_error, json_ok
-from .admin_routes import require_admin_role
+from . import json_error, json_ok, role_required
 from ..services.users_service import (
     UserServiceError,
     create_user_service,
@@ -21,7 +20,7 @@ api_users_bp = Blueprint("api_users", __name__)
 
 @api_users_bp.get("")
 @jwt_required()
-@require_admin_role
+@role_required("admin")
 def list_users():
     """
     Get all users with optional filters.
@@ -62,7 +61,7 @@ def list_users():
 
 @api_users_bp.get("/<int:user_id>")
 @jwt_required()
-@require_admin_role
+@role_required("admin")
 def get_user(user_id):
     """
     Get user by ID.
@@ -93,7 +92,7 @@ def get_user(user_id):
 
 @api_users_bp.post("")
 @jwt_required()
-@require_admin_role
+@role_required("admin")
 def create_user():
     """
     Create new user.
@@ -139,7 +138,7 @@ def create_user():
 
 @api_users_bp.put("/<int:user_id>")
 @jwt_required()
-@require_admin_role
+@role_required("admin")
 def update_user(user_id):
     """
     Update user.
@@ -188,7 +187,7 @@ def update_user(user_id):
 
 @api_users_bp.delete("/<int:user_id>")
 @jwt_required()
-@require_admin_role
+@role_required("admin")
 def delete_user(user_id):
     """
     Delete user.
@@ -209,7 +208,7 @@ def delete_user(user_id):
 
 @api_users_bp.get("/search/<query>")
 @jwt_required()
-@require_admin_role
+@role_required("admin")
 def search_users(query):
     """
     Search users by email or name.
@@ -245,7 +244,7 @@ def search_users(query):
 
 @api_users_bp.get("/stats/overview")
 @jwt_required()
-@require_admin_role
+@role_required("admin")
 def get_stats():
     """
     Get user statistics.
