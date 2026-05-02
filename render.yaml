@@ -5,7 +5,7 @@ services:
     plan: free
     region: singapore
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -w 4 -b 0.0.0.0:$PORT backend.run:app
+    startCommand: gunicorn -w 2 -b 0.0.0.0:$PORT backend.run:app
     healthCheckPath: /
     envVars:
       - key: FLASK_ENV
@@ -26,6 +26,10 @@ services:
         value: "587"
       - key: MAIL_USE_TLS
         value: "true"
+      - key: MAIL_USERNAME
+        value: your_email@gmail.com
+      - key: MAIL_PASSWORD
+        value: your_app_password
 
   - type: web
     name: qlda-frontend
@@ -33,11 +37,14 @@ services:
     plan: free
     region: singapore
     buildCommand: cd frontend && npm install && npm run build
-    publishPath: frontend/dist
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://qlda-backend.onrender.com
 
-  - type: postgres
-    name: qlda-postgres
+databases:
+  - name: qlda-postgres
     plan: free
     region: singapore
     databaseName: qlda_db
-    username: qlda_user
+    user: qlda_user
