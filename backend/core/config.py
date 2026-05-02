@@ -14,7 +14,7 @@ class Config:
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jobportal-jwt-secret-key-change-me-to-a-long-random-string")
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
-        "mysql+pymysql://jobportal_user:JobPortal123%21@127.0.0.1:3306/job_portal",
+        "postgresql://jobportal_user:JobPortal123%21@127.0.0.1:5432/job_portal",
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JSON_SORT_KEYS = False
