@@ -1,6 +1,7 @@
 from pathlib import Path
 from urllib.parse import urlparse
-from flask import Flask
+from flask import Flask, redirect, url_for
+from flask_login import current_user
 
 from .api.registry import register_api_blueprints
 from .web.registry import register_web_blueprints
@@ -34,7 +35,9 @@ def create_app():
 
     @app.route("/")
     def index():
-        return {"ok": True, "message": "Auth API is running"}
+        if current_user.is_authenticated:
+            return redirect(url_for("admin.dashboard"))
+        return redirect(url_for("admin.login"))
 
     with app.app_context():
         Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
