@@ -1,8 +1,6 @@
 from pathlib import Path
-from urllib.parse import urlparse
 from flask import Flask, redirect, url_for, request, make_response
 from flask_login import current_user
-
 from flask_cors import CORS
 
 from .api.registry import register_api_blueprints
@@ -18,7 +16,7 @@ def create_app():
     app.config.from_object(Config)
 
     # =========================
-    # EXTENSIONS
+    # INIT EXTENSIONS
     # =========================
     db.init_app(app)
     migrate.init_app(app, db)
@@ -34,19 +32,21 @@ def create_app():
         return get_user_by_id(int(user_id))
 
     # =========================
-    # CORS - FIX TRIỆT ĐỂ
+    # CORS CONFIG (FIX TRIỆT ĐỂ)
     # =========================
     FRONTEND = "https://qlda-frontend.onrender.com"
 
     CORS(
         app,
-        resources={r"/*": {"origins": FRONTEND}},
+        resources={r"/api/*": {"origins": FRONTEND}},
         supports_credentials=True,
         allow_headers=["Content-Type", "Authorization"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     )
 
-    # FORCE HEADERS (fix mọi case bị bypass blueprint)
+    # =========================
+    # FORCE HEADERS (fix ngrok + missing header)
+    # =========================
     @app.after_request
     def after_request(response):
         response.headers["Access-Control-Allow-Origin"] = FRONTEND
@@ -55,7 +55,9 @@ def create_app():
         response.headers["Access-Control-Allow-Credentials"] = "true"
         return response
 
-    # HANDLE OPTIONS GLOBAL (fix preflight chết ngầm)
+    # =========================
+    # HANDLE PRE-FLIGHT OPTIONS
+    # =========================
     @app.before_request
     def handle_options():
         if request.method == "OPTIONS":
@@ -73,7 +75,7 @@ def create_app():
     register_web_blueprints(app)
 
     # =========================
-    # ROOT
+    # ROOT ROUTE
     # =========================
     @app.route("/")
     def index():
@@ -82,7 +84,7 @@ def create_app():
         return redirect(url_for("admin.login"))
 
     # =========================
-    # INIT
+    # INIT APP CONTEXT
     # =========================
     with app.app_context():
         Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
