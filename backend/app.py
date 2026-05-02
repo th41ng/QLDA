@@ -1,5 +1,5 @@
 from pathlib import Path
-from flask import Flask, redirect, url_for, request, make_response
+from flask import Flask, redirect, url_for
 from flask_login import current_user
 from flask_cors import CORS
 
@@ -25,48 +25,24 @@ def create_app():
     login_manager.init_app(app)
 
     # =========================
-    # LOGIN LOADER
+    # LOGIN
     # =========================
     @login_manager.user_loader
     def load_user(user_id):
         return get_user_by_id(int(user_id))
 
     # =========================
-    # CORS CONFIG (FIX TRIỆT ĐỂ)
+    # CORS (CLEAN - KHÔNG OVERRIDE)
     # =========================
     FRONTEND = "https://qlda-frontend.onrender.com"
 
     CORS(
         app,
-        resources={r"/api/*": {"origins": FRONTEND}},
+        resources={r"/*": {"origins": FRONTEND}},
         supports_credentials=True,
         allow_headers=["Content-Type", "Authorization"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     )
-
-    # =========================
-    # FORCE HEADERS (fix ngrok + missing header)
-    # =========================
-    @app.after_request
-    def after_request(response):
-        response.headers["Access-Control-Allow-Origin"] = FRONTEND
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        return response
-
-    # =========================
-    # HANDLE PRE-FLIGHT OPTIONS
-    # =========================
-    @app.before_request
-    def handle_options():
-        if request.method == "OPTIONS":
-            resp = make_response()
-            resp.headers["Access-Control-Allow-Origin"] = FRONTEND
-            resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-            resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-            resp.headers["Access-Control-Allow-Credentials"] = "true"
-            return resp
 
     # =========================
     # BLUEPRINTS
@@ -84,7 +60,7 @@ def create_app():
         return redirect(url_for("admin.login"))
 
     # =========================
-    # INIT APP CONTEXT
+    # INIT CONTEXT
     # =========================
     with app.app_context():
         Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
