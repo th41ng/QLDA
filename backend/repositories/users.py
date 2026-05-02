@@ -1,5 +1,6 @@
 """User repository for database operations"""
 
+from ..core.extensions import db
 from ..models import User
 
 
@@ -61,6 +62,16 @@ def get_user_by_email(email):
     """
     query = User.query.filter_by(email=(email or "").strip().lower())
     return query.first()
+
+
+def count_all_users():
+    """
+    Count all users.
+    
+    Returns:
+        Total count of all users
+    """
+    return User.query.count()
 
 
 def count_users_by_role(role):
@@ -129,7 +140,6 @@ def create_user(full_name, email, password_hash, role="candidate", status="activ
         role=role,
         status=status,
     )
-    from ..core.extensions import db
     db.session.add(user)
     db.session.commit()
     return user
@@ -152,7 +162,6 @@ def update_user(user, **kwargs):
         if field in allowed_fields and value is not None:
             setattr(user, field, value)
     
-    from ..core.extensions import db
     db.session.commit()
     return user
 
@@ -167,7 +176,6 @@ def delete_user(user):
     Returns:
         True if deleted successfully
     """
-    from ..core.extensions import db
     db.session.delete(user)
     db.session.commit()
     return True

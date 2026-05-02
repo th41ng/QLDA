@@ -1,4 +1,5 @@
 import os
+from datetime import date
 
 from flask import Blueprint, current_app, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -6,25 +7,14 @@ from sqlalchemy.orm import selectinload
 
 from . import json_error, json_ok, role_required
 from ..core.extensions import db
-from ..models import Application, JobPosting, Notification, Resume, Tag, User
-from ..services.mail_service import send_mail
+from ..models import Application, JobPosting, Resume, Tag, User
+from ..schemas import tag_to_dict
 from ..services.application_service import (
     update_application_status as update_application_status_service,
     ApplicationServiceError,
 )
 
 api_applications_bp = Blueprint("api_applications", __name__)
-
-
-def _tag_to_dict(tag: Tag):
-    return {
-        "id": tag.id,
-        "name": tag.name,
-        "slug": tag.slug,
-        "description": tag.description,
-        "category": tag.category.slug if tag.category else None,
-        "category_name": tag.category.name if tag.category else None,
-    }
 
 
 def _resume_to_dict(resume: Resume | None):
@@ -39,7 +29,7 @@ def _resume_to_dict(resume: Resume | None):
         "generated_pdf_path": resume.generated_pdf_path,
         "generated_docx_path": resume.generated_docx_path,
         "structured_json": resume.structured_json or {},
-        "tags": [_tag_to_dict(tag) for tag in (resume.tags or [])],
+        "tags": [tag_to_dict(tag) for tag in (resume.tags or [])],
     }
 
 
@@ -93,62 +83,6 @@ def _application_to_dict(application: Application):
     }
 
 
-def _build_status_message(status: str, job_title: str, reason: str | None = None):
-    title_map = {
-        "rejected": "Kết quả hồ sơ ứng tuyển",
-    }
-    message_map = {
-        "rejected": f"Hồ sơ của bạn cho vị trí {job_title} đã bị từ chối.",
-    }
-    title = title_map.get(status, "Cập nhật hồ sơ ứng tuyển")
-    message = message_map.get(status, f"Hồ sơ ứng tuyển cho vị trí {job_title} vừa được cập nhật.")
-    if reason:
-        message = f"{message} Lý do: {reason}"
-    return title, message
-
-
-def _notify_candidate_for_status(application: Application, reason: str | None = None):
-    candidate = application.candidate
-    if not candidate:
-        return
-
-    job_title = application.job.title if application.job else f"#{application.job_id}"
-    title, message = _build_status_message(application.status, job_title, reason)
-    link_url = f"/candidate/applications?applicationId={application.id}"
-
-    db.session.add(
-        Notification(
-            user_id=application.candidate_user_id,
-            title=title,
-            message=message,
-            type=application.status,
-            link_url=link_url,
-        )
-    )
-
-    if not candidate.email:
-        return
-
-    subject = title
-    body = (
-        f"Xin chào {candidate.full_name or 'ứng viên'},\n\n"
-        f"{message}\n\n"
-        f"Bạn có thể xem chi tiết hồ sơ tại: "
-        f"{current_app.config.get('FRONTEND_URL', 'http://127.0.0.1:5173')}/candidate/applications?applicationId={application.id}\n"
-    )
-    html = (
-        "<div style='font-family:Arial,sans-serif;line-height:1.6'>"
-        "<h2 style='margin:0 0 12px;color:#1d4ed8'>JOBPORTAL</h2>"
-        f"<p>Xin chào <b>{candidate.full_name or 'ứng viên'}</b>,</p>"
-        f"<p>{message}</p>"
-        f"<p><a href='{current_app.config.get('FRONTEND_URL', 'http://127.0.0.1:5173')}/candidate/applications?applicationId={application.id}' "
-        "style='display:inline-block;padding:10px 16px;background:#1d4ed8;color:#fff;text-decoration:none;border-radius:8px'>"
-        "Xem chi tiết hồ sơ</a></p>"
-        "</div>"
-    )
-    send_mail(subject, [candidate.email], body, html)
-
-
 @api_applications_bp.post("")
 @jwt_required()
 @role_required("candidate")
@@ -168,6 +102,9 @@ def create_application():
     job = JobPosting.query.filter_by(id=job_id).first()
     if not job or job.status not in {"published", "open"}:
         return json_error("Job not found.", 404)
+
+    if job.deadline and job.deadline < date.today():
+        return json_error("This job posting has expired.", 410)
 
     resume = Resume.query.filter_by(id=resume_id, user_id=user_id).first()
     if not resume:
@@ -225,7 +162,13 @@ def check_application_for_job():
 @role_required("candidate")
 def my_applications():
     user_id = int(get_jwt_identity())
-    apps = (
+    try:
+        page = max(1, int(request.args.get("page") or 1))
+        per_page = min(50, max(1, int(request.args.get("per_page") or 10)))
+    except (TypeError, ValueError):
+        page, per_page = 1, 10
+
+    base_q = (
         Application.query.options(
             selectinload(Application.job).selectinload(JobPosting.company),
             selectinload(Application.resume).selectinload(Resume.tags),
@@ -233,9 +176,16 @@ def my_applications():
         )
         .filter(Application.candidate_user_id == user_id)
         .order_by(Application.applied_at.desc())
-        .all()
     )
-    return json_ok([_application_to_dict(app) for app in apps])
+    total = base_q.count()
+    apps = base_q.offset((page - 1) * per_page).limit(per_page).all()
+    return json_ok({
+        "items": [_application_to_dict(app) for app in apps],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": max(1, (total + per_page - 1) // per_page),
+    })
 
 
 @api_applications_bp.get("/recruiter")
@@ -243,7 +193,14 @@ def my_applications():
 @role_required("recruiter", "admin")
 def recruiter_applications():
     user_id = int(get_jwt_identity())
-    apps = (
+    job_id_filter = request.args.get("job_id")
+    try:
+        page = max(1, int(request.args.get("page") or 1))
+        per_page = min(50, max(1, int(request.args.get("per_page") or 10)))
+    except (TypeError, ValueError):
+        page, per_page = 1, 10
+
+    base_q = (
         Application.query.options(
             selectinload(Application.job).selectinload(JobPosting.company),
             selectinload(Application.resume).selectinload(Resume.tags),
@@ -251,10 +208,23 @@ def recruiter_applications():
         )
         .join(JobPosting, JobPosting.id == Application.job_id)
         .filter(JobPosting.recruiter_user_id == user_id)
-        .order_by(Application.applied_at.desc())
-        .all()
     )
-    return json_ok([_application_to_dict(app) for app in apps])
+    if job_id_filter:
+        try:
+            base_q = base_q.filter(Application.job_id == int(job_id_filter))
+        except (TypeError, ValueError):
+            pass
+    base_q = base_q.order_by(Application.applied_at.desc())
+
+    total = base_q.count()
+    apps = base_q.offset((page - 1) * per_page).limit(per_page).all()
+    return json_ok({
+        "items": [_application_to_dict(app) for app in apps],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": max(1, (total + per_page - 1) // per_page),
+    })
 
 
 @api_applications_bp.get("/<int:application_id>/resume")
