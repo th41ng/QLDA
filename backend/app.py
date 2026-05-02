@@ -24,7 +24,7 @@ def create_app():
         app.config["FRONTEND_URL"],
         app.config.get("FRONTEND_URLS", ""),
     )
-    cors.init_app(app, resources={r"/api/*": {"origins": frontend_origins}}, supports_credentials=True)
+    cors.init_app(app, resources={r"/*": {"origins": frontend_origins}}, supports_credentials=True)
 
     @login_manager.user_loader
     def load_user(user_id):
