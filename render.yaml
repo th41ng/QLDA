@@ -27,15 +27,13 @@ services:
       - key: MAIL_USE_TLS
         value: "true"
 
-  - type: static
+  - type: web
     name: qlda-frontend
+    env: static
     plan: free
     region: singapore
     buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: frontend/dist
-    envVars:
-      - key: VITE_API_URL
-        value: https://qlda-backend.onrender.com
+    publishPath: frontend/dist
 
   - type: postgres
     name: qlda-postgres
