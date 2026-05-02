@@ -33,18 +33,20 @@ class MissingReasonError(ApplicationServiceError):
     pass
 
 
-VALID_STATUSES = {"submitted", "reviewing", "accepted", "rejected"}
+VALID_STATUSES = {"submitted", "reviewing", "interview", "accepted", "rejected"}
 STATUSES_REQUIRING_REASON = {"rejected"}
-STATUSES_REQUIRING_NOTIFICATION = {"accepted", "rejected"}
+STATUSES_REQUIRING_NOTIFICATION = {"interview", "accepted", "rejected"}
 
 
 def _build_status_message(status: str, job_title: str, reason: str | None = None):
     """Build notification title and message based on status."""
     title_map = {
+        "interview": "Bạn được mời phỏng vấn!",
         "accepted": "Chúc mừng! Hồ sơ ứng tuyển được chấp nhận",
         "rejected": "Kết quả hồ sơ ứng tuyển",
     }
     message_map = {
+        "interview": f"Hồ sơ của bạn cho vị trí {job_title} đã được chọn vào vòng phỏng vấn.",
         "accepted": f"Chúc mừng! Hồ sơ của bạn cho vị trí {job_title} đã được chấp nhận.",
         "rejected": f"Hồ sơ của bạn cho vị trí {job_title} đã bị từ chối.",
     }

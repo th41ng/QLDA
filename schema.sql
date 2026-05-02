@@ -285,7 +285,7 @@ CREATE TABLE applications (
   job_id INT NOT NULL,
   resume_id INT NOT NULL,
   cover_letter LONGTEXT,
-  status ENUM('submitted', 'reviewing', 'accepted', 'rejected') NOT NULL DEFAULT 'submitted',
+  status ENUM('submitted', 'reviewing', 'interview', 'accepted', 'rejected', 'withdrawn') NOT NULL DEFAULT 'submitted',
   recruiter_note TEXT,
   applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

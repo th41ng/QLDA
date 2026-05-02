@@ -15,10 +15,10 @@ from ..models.base import job_tags
 
 api_jobs_bp = Blueprint("api_jobs", __name__)
 
-_EMPLOYMENT_TYPES = {"full-time", "part-time", "contract", "internship", "freelance"}
+_EMPLOYMENT_TYPES = {"full-time", "part-time", "contract", "internship"}
 _WORKPLACE_TYPES = {"onsite", "remote", "hybrid"}
-_EXPERIENCE_LEVELS = {"intern", "junior", "mid", "senior", "lead", "manager"}
-_EDUCATION_LEVELS = {"any", "high-school", "associate", "bachelor", "master", "phd"}
+_EXPERIENCE_LEVELS = {"intern", "fresher", "junior", "middle", "senior", "lead"}
+_EDUCATION_LEVELS = {"any", "highschool", "college", "university", "postgraduate"}
 
 
 def _validate_job_enums(data: dict) -> str | None:
