@@ -7,8 +7,8 @@
       "plan": "free",
       "region": "singapore",
       "buildCommand": "pip install -r requirements.txt",
-      "startCommand": "gunicorn backend.run:app",
-      "healthCheckPath": "/",
+      "startCommand": "gunicorn backend.run:app --bind 0.0.0.0:$PORT",
+      "healthCheckPath": "/healthz",
       "envVars": [
         { "key": "FLASK_ENV", "value": "production" },
         { "key": "SECRET_KEY", "generateValue": true },
@@ -21,9 +21,11 @@
           }
         },
         { "key": "FRONTEND_URL", "value": "https://qlda-frontend.up.railway.app" },
+        { "key": "FRONTEND_URLS", "value": "https://qlda-frontend.up.railway.app" },
         { "key": "MAIL_SERVER", "value": "smtp.gmail.com" },
         { "key": "MAIL_PORT", "value": "587" },
         { "key": "MAIL_USE_TLS", "value": "true" },
+        { "key": "EMBEDDING_WARMUP_ON_START", "value": "false" },
         { "key": "DEBUG", "value": "false" }
       ]
     },
