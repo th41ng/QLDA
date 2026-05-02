@@ -1,6 +1,6 @@
 from pathlib import Path
 from urllib.parse import urlparse
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, request
 from flask_login import current_user
 
 from .api.registry import register_api_blueprints
@@ -20,15 +20,49 @@ def create_app():
     mail.init_app(app)
     jwt.init_app(app)
     login_manager.init_app(app)
+    
+    # Build list of allowed CORS origins
     frontend_origins = _build_frontend_origins(
         app.config["FRONTEND_URL"],
         app.config.get("FRONTEND_URLS", ""),
     )
-    cors.init_app(app, resources={r"/*": {"origins": frontend_origins}}, supports_credentials=True)
+    
+    # Initialize CORS with explicit configuration BEFORE registering blueprints
+    cors.init_app(
+        app,
+        resources={r"/*": {
+            "origins": frontend_origins,
+            "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+            "expose_headers": ["Content-Range", "X-Content-Range"],
+            "supports_credentials": True,
+            "max_age": 3600,
+        }},
+        supports_credentials=True,
+    )
 
     @login_manager.user_loader
     def load_user(user_id):
         return get_user_by_id(int(user_id))
+
+    # Handle preflight OPTIONS requests BEFORE JWT/auth decorators can block them
+    @app.before_request
+    def handle_preflight():
+        if request.method == "OPTIONS":
+            # Return 200 immediately for OPTIONS requests
+            return _build_cors_response()
+
+    # Enforce CORS headers on all responses
+    @app.after_request
+    def apply_cors_headers(response):
+        origin = request.headers.get("Origin")
+        if origin in frontend_origins:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Max-Age"] = "3600"
+        return response
 
     register_api_blueprints(app)
     register_web_blueprints(app)
@@ -59,6 +93,27 @@ def create_app():
                 )
 
     return app
+
+
+def _build_cors_response():
+    """Build a 200 response for OPTIONS preflight requests."""
+    from flask import Response, current_app
+    
+    origin = request.headers.get("Origin")
+    frontend_origins = _build_frontend_origins(
+        current_app.config.get("FRONTEND_URL", "http://127.0.0.1:5173"),
+        current_app.config.get("FRONTEND_URLS", ""),
+    )
+    
+    response = Response()
+    response.status_code = 200
+    if origin in frontend_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Max-Age"] = "3600"
+    return response
 
 
 def _build_frontend_origins(primary_origin, extra_origins=None):
