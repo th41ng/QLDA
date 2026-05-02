@@ -2,19 +2,9 @@ from flask import Blueprint, request
 
 from . import json_ok
 from ..models import Category, Tag
+from ..schemas import tag_to_dict
 
 api_tags_bp = Blueprint("api_tags", __name__)
-
-
-def _tag_to_dict(tag: Tag):
-    return {
-        "id": tag.id,
-        "name": tag.name,
-        "slug": tag.slug,
-        "description": tag.description,
-        "category": tag.category.slug if tag.category else None,
-        "category_name": tag.category.name if tag.category else None,
-    }
 
 
 def _category_to_dict(category: Category):
@@ -34,7 +24,7 @@ def list_tags():
     if category_filter:
         query = query.filter((Category.slug == category_filter) | (Category.name.ilike(category_filter)))
     tags = query.order_by(Tag.name.asc()).all()
-    return json_ok([_tag_to_dict(tag) for tag in tags])
+    return json_ok([tag_to_dict(tag) for tag in tags])
 
 
 @api_tags_bp.get("/categories")

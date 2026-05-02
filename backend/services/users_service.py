@@ -219,7 +219,7 @@ def verify_user_password(user_id, password):
 def get_user_stats():
     """Get user statistics by role"""
     return {
-        "total_users": users_repo.get_all_users().__len__(),
+        "total_users": users_repo.count_all_users(),
         "admins": users_repo.count_users_by_role("admin"),
         "candidates": users_repo.count_users_by_role("candidate"),
         "recruiters": users_repo.count_users_by_role("recruiter"),

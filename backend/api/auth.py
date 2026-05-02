@@ -94,11 +94,10 @@ def register_password():
     return _issue_token(user)
 
 
-@api_auth_bp.post("/otp/send")
-def otp_send():
+def _do_otp_send(purpose_override: str | None = None):
     data = request.get_json(force=True)
+    purpose = purpose_override or data.get("purpose")
     try:
-        purpose = data.get("purpose")
         role = data.get("role")
         if purpose == "register":
             role = _normalize_register_role(role)
@@ -124,13 +123,13 @@ def otp_send():
     )
 
 
-@api_auth_bp.post("/otp/verify")
-def otp_verify():
+def _do_otp_verify(purpose_override: str | None = None):
     data = request.get_json(force=True)
+    purpose = purpose_override or data.get("purpose")
     try:
         verified = verify_otp_request(
             email=data.get("email"),
-            purpose=data.get("purpose"),
+            purpose=purpose,
             code=data.get("otp") or data.get("code"),
         )
     except OtpServiceError as exc:
@@ -177,6 +176,16 @@ def otp_verify():
     return _issue_token(user)
 
 
+@api_auth_bp.post("/otp/send")
+def otp_send():
+    return _do_otp_send()
+
+
+@api_auth_bp.post("/otp/verify")
+def otp_verify():
+    return _do_otp_verify()
+
+
 @api_auth_bp.post("/otp/resend")
 def otp_resend():
     data = request.get_json(force=True)
@@ -201,69 +210,12 @@ def otp_resend():
 
 @api_auth_bp.post("/register/otp/start")
 def register_otp_start():
-    data = request.get_json(force=True)
-    try:
-        role = _normalize_register_role(data.get("role"))
-        result = send_otp_request(
-            email=data.get("email"),
-            purpose="register",
-            request_ip=_request_ip(),
-            role=role,
-            full_name=data.get("fullName") or data.get("full_name"),
-            password=data.get("password"),
-            confirm_password=data.get("confirmPassword") or data.get("confirm_password"),
-        )
-    except OtpServiceError as exc:
-        return json_error(exc.message, exc.status, **exc.extra)
-    return json_ok(
-        {
-            "email": result.email,
-            "purpose": result.purpose,
-            "expiresIn": result.expires_in,
-            "resendIn": result.resend_in,
-        },
-        "OTP sent successfully",
-    )
+    return _do_otp_send(purpose_override="register")
 
 
 @api_auth_bp.post("/register/otp/verify")
 def register_otp_verify():
-    data = request.get_json(force=True)
-    try:
-        verified = verify_otp_request(
-            email=data.get("email"),
-            purpose="register",
-            code=data.get("otp") or data.get("code"),
-        )
-    except OtpServiceError as exc:
-        return json_error(exc.message, exc.status, **exc.extra)
-
-    payload = verified.payload or {}
-    if get_user_by_email(verified.email):
-        return json_error("Email already exists.", 409)
-    password_hash_temp = payload.get("password_hash_temp")
-    if not password_hash_temp:
-        return json_error("Missing registration payload.", 400)
-    try:
-        role = _normalize_register_role(payload.get("role"))
-    except ValueError:
-        return json_error("Vui lòng chọn vai trò.", 400)
-
-    user = User(
-        full_name=payload.get("full_name", "").strip(),
-        email=verified.email,
-        password_hash=password_hash_temp,
-        role=role,
-        auth_method_preference="otp",
-        email_verified=True,
-        status="active",
-        phone=(payload.get("phone") or "").strip() or None,
-    )
-    db.session.add(user)
-    db.session.flush()
-    _apply_registration_profile(user, payload)
-    db.session.commit()
-    return _issue_token(user)
+    return _do_otp_verify(purpose_override="register")
 
 
 @api_auth_bp.post("/login/password")
@@ -287,49 +239,12 @@ def login_password():
 
 @api_auth_bp.post("/login/otp/start")
 def login_otp_start():
-    data = request.get_json(force=True)
-    try:
-        result = send_otp_request(
-            email=data.get("email"),
-            purpose="login",
-            request_ip=_request_ip(),
-        )
-    except OtpServiceError as exc:
-        return json_error(exc.message, exc.status, **exc.extra)
-    return json_ok(
-        {
-            "email": result.email,
-            "purpose": result.purpose,
-            "expiresIn": result.expires_in,
-            "resendIn": result.resend_in,
-        },
-        "OTP sent successfully",
-    )
+    return _do_otp_send(purpose_override="login")
 
 
 @api_auth_bp.post("/login/otp/verify")
 def login_otp_verify():
-    data = request.get_json(force=True)
-    try:
-        verified = verify_otp_request(
-            email=data.get("email"),
-            purpose="login",
-            code=data.get("otp") or data.get("code"),
-        )
-    except OtpServiceError as exc:
-        return json_error(exc.message, exc.status, **exc.extra)
-
-    user = get_user_by_email(verified.email)
-    if not user:
-        return json_error("Tài khoản không tồn tại", 404)
-    if user.status != "active":
-        return json_error("Tài khoản hiện không khả dụng", 403)
-    if user.role == "admin":
-        return json_error("Admin must login through backend web.", 403)
-    user.auth_method_preference = "otp"
-    user.last_login_at = datetime.utcnow()
-    db.session.commit()
-    return _issue_token(user)
+    return _do_otp_verify(purpose_override="login")
 
 
 @api_auth_bp.get("/me")

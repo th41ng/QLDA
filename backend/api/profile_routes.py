@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Blueprint, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
@@ -47,8 +49,6 @@ def update_profile():
         if field in data:
             value = data[field]
             if field == "dob" and value:
-                from datetime import date
-
                 value = date.fromisoformat(value)
             setattr(profile, field, value)
     avatar_file = request.files.get("avatar_file")

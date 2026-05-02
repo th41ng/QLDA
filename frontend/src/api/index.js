@@ -50,8 +50,16 @@ export const api = {
       }),
   },
   jobs: {
-    list: (params = "") => apiRequest(`/jobs${params}`, { auth: false }),
-    mine: (params = "") => apiRequest(`/jobs/mine${params}`),
+    list: (params = {}) => {
+      if (typeof params === "string") return apiRequest(`/jobs${params}`, { auth: false });
+      const p = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== "") p.set(k, String(v));
+      });
+      return apiRequest(`/jobs?${p.toString()}`, { auth: false });
+    },
+    filterOptions: () => apiRequest("/jobs/filter-options", { auth: false }),
+    mine: (params = "") => apiRequest(`/jobs/mine${params}`).then((d) => d?.items ?? (Array.isArray(d) ? d : [])),
     detail: (id) => apiRequest(`/jobs/${id}`, { auth: false }),
     screen: (id) => apiRequest(`/jobs/${id}/screen`),
     create: (payload) => apiRequest("/jobs", { method: "POST", body: JSON.stringify(payload) }),
@@ -140,8 +148,8 @@ export const api = {
         body: JSON.stringify(payload),
       }),
     checkForJob: (jobId) => apiRequest(`/applications/check?job_id=${jobId}`),
-    myApplications: () => apiRequest("/applications/mine"),
-    recruiterApplications: () => apiRequest("/applications/recruiter"),
+    myApplications: () => apiRequest("/applications/mine").then((d) => d?.items ?? (Array.isArray(d) ? d : [])),
+    recruiterApplications: () => apiRequest("/applications/recruiter").then((d) => d?.items ?? (Array.isArray(d) ? d : [])),
     recruiterApplicationResume: (applicationId) => apiRequest(`/applications/${applicationId}/resume`),
     recruiterResumePdfUrl: (applicationId) =>
       `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001/api"}/applications/${applicationId}/resume/pdf`,
