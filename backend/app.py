@@ -1,6 +1,6 @@
 from pathlib import Path
 import os
-from flask import Flask, redirect, url_for, request
+from flask import Flask, redirect, url_for, request, jsonify
 from flask_login import current_user
 from flask_cors import CORS   # ← Thêm dòng này
 
@@ -8,7 +8,6 @@ from .api.registry import register_api_blueprints
 from .web.registry import register_web_blueprints
 from .core.config import Config
 from .core.extensions import db, jwt, login_manager, mail, migrate
-from .core.services.matching_service import warmup_embedding_model
 from .repositories import get_user_by_id
 
 
@@ -73,6 +72,10 @@ def create_app():
             return redirect(url_for("admin.dashboard"))
         return redirect(url_for("admin.login"))
 
+    @app.get("/healthz")
+    def healthz():
+        return jsonify({"status": "ok"}), 200
+
     # =========================
     # INIT CONTEXT
     # =========================
@@ -81,8 +84,5 @@ def create_app():
         # Tests override SQLALCHEMY_DATABASE_URI after create_app(); don't connect early.
         if flask_env != "testing":
             db.create_all()
-
-            if app.config.get("EMBEDDING_WARMUP_ON_START", True):
-                warmup_embedding_model()
 
     return app

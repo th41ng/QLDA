@@ -4,10 +4,7 @@ import copy
 import unicodedata
 from collections import Counter
 
-try:
-    from sentence_transformers import SentenceTransformer
-except Exception:  # pragma: no cover - optional dependency
-    SentenceTransformer = None
+SentenceTransformer = None  # lazy import inside _get_embedding_model()
 
 from ...models import JobPosting, MatchScore, Resume, Tag
 
@@ -57,8 +54,17 @@ def _get_embedding_model():
     global _EMBEDDING_MODEL
     if _EMBEDDING_MODEL is not None:
         return _EMBEDDING_MODEL
+
+    global SentenceTransformer
     if SentenceTransformer is None:
-        return None
+        try:
+            from sentence_transformers import SentenceTransformer as _ST  # type: ignore
+
+            SentenceTransformer = _ST
+        except Exception:
+            SentenceTransformer = None
+            return None
+
     model_name = (os.getenv("EMBEDDING_MODEL_NAME") or _DEFAULT_EMBEDDING_MODEL).strip()
     try:
         _EMBEDDING_MODEL = SentenceTransformer(model_name)
