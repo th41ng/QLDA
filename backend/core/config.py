@@ -14,6 +14,14 @@ def normalize_database_url(url: str) -> str:
     if not url:
         return url
 
+    # Normalize MySQL URLs to an available DBAPI.
+    # Railway (and some providers) may provide mysql://... without an explicit driver,
+    # which makes SQLAlchemy try to use MySQLdb (mysqlclient) and fail.
+    if url.startswith("mysql://"):
+        url = "mysql+pymysql://" + url[len("mysql://") :]
+    if url.startswith("mysql+mysqldb://"):
+        url = "mysql+pymysql://" + url[len("mysql+mysqldb://") :]
+
     # Some platforms still provide the legacy scheme.
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://") :]
@@ -31,7 +39,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = normalize_database_url(
         os.getenv(
             "DATABASE_URL",
-            "postgresql://jobportal_user:JobPortal123%21@127.0.0.1:5432/job_portal",
+            "mysql+pymysql://jobportal_user:JobPortal123%21@127.0.0.1:3306/job_portal",
         )
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
