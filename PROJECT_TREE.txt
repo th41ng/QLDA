@@ -1,0 +1,212 @@
+QLDA/
+├── .env
+├── .gitignore
+├── README.md
+├── package-lock.json
+├── pytest.ini
+├── railway.json
+├── requirements.txt
+├── schema.sql
+├── backend/
+│   ├── __init__.py
+│   ├── app.py
+│   ├── run.py
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── admin_routes.py
+│   │   ├── applications_routes.py
+│   │   ├── auth.py
+│   │   ├── companies_routes.py
+│   │   ├── jobs_routes.py
+│   │   ├── notifications_routes.py
+│   │   ├── profile_routes.py
+│   │   ├── registry.py
+│   │   ├── resume_routes.py
+│   │   ├── serializers.py
+│   │   ├── statistics_routes.py
+│   │   ├── tags_routes.py
+│   │   └── users_routes.py
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config.py
+│   │   ├── extensions.py
+│   │   ├── security.py
+│   │   └── services/
+│   │       ├── __init__.py
+│   │       ├── cv_parser_service.py
+│   │       ├── cv_service.py
+│   │       ├── mail_service.py
+│   │       ├── matching_service.py
+│   │       └── storage_service.py
+│   ├── instance/
+│   │   └── uploads/
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── application.py
+│   │   ├── base.py
+│   │   ├── candidate_company_follow.py
+│   │   ├── candidate_profile.py
+│   │   ├── category.py
+│   │   ├── company.py
+│   │   ├── cv_template.py
+│   │   ├── job_posting.py
+│   │   ├── match_score.py
+│   │   ├── notification.py
+│   │   ├── otp_code.py
+│   │   ├── resume.py
+│   │   ├── tag.py
+│   │   └── user.py
+│   ├── repositories/
+│   │   ├── __init__.py
+│   │   ├── companies.py
+│   │   ├── cv_templates.py
+│   │   ├── jobs.py
+│   │   ├── profiles.py
+│   │   ├── resumes.py
+│   │   ├── statistics.py
+│   │   ├── tags.py
+│   │   └── users.py
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   └── serializers.py
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── application_service.py
+│   │   ├── auth_service.py
+│   │   ├── cv_service.py
+│   │   ├── mail_service.py
+│   │   ├── matching_service.py
+│   │   ├── otp_service.py
+│   │   ├── statistics_service.py
+│   │   ├── storage_service.py
+│   │   └── users_service.py
+│   ├── static/
+│   │   └── css/
+│   │       └── admin.css
+│   ├── templates/
+│   │   └── admin/
+│   │       ├── _head_common.html
+│   │       ├── applications.html
+│   │       ├── base.html
+│   │       ├── categories.html
+│   │       ├── companies.html
+│   │       ├── cv_templates.html
+│   │       ├── dashboard.html
+│   │       ├── jobs.html
+│   │       ├── login.html
+│   │       ├── resumes.html
+│   │       ├── tags.html
+│   │       └── users.html
+│   └── web/
+│       ├── __init__.py
+│       ├── admin_routes.py
+│       └── registry.py
+├── frontend/
+│   ├── index.html
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── vite.config.js
+│   └── src/
+│       ├── App.jsx
+│       ├── main.jsx
+│       ├── styles.css
+│       ├── api/
+│       │   └── index.js
+│       ├── components/
+│       │   ├── ProtectedRoute.jsx
+│       │   ├── Skeleton.jsx
+│       │   ├── employers/
+│       │   │   ├── EmployerCard.jsx
+│       │   │   ├── EmployerFilterChips.jsx
+│       │   │   ├── EmployerSearchHero.jsx
+│       │   │   └── EmployerSection.jsx
+│       │   ├── landing/
+│       │   │   ├── LandingEmployerCard.jsx
+│       │   │   ├── LandingJobCard.jsx
+│       │   │   ├── LandingQuickActionCard.jsx
+│       │   │   ├── LandingSearchBar.jsx
+│       │   │   └── LandingStepCard.jsx
+│       │   └── resume/
+│       │       ├── ResumeCard.jsx
+│       │       ├── ResumeForm.jsx
+│       │       ├── ResumeHeader.jsx
+│       │       ├── ResumeList.jsx
+│       │       ├── ResumePreviewModal.jsx
+│       │       ├── ResumeStats.jsx
+│       │       ├── ResumeTabs.jsx
+│       │       ├── ResumeTemplateGrid.jsx
+│       │       ├── ResumeUploadCard.jsx
+│       │       └── templates/
+│       │           ├── ATSCleanTemplate.jsx
+│       │           ├── CreativeRoseTemplate.jsx
+│       │           ├── DataAnalystTemplate.jsx
+│       │           ├── HRExecutiveTemplate.jsx
+│       │           ├── MarketingProTemplate.jsx
+│       │           ├── MinimalSlateTemplate.jsx
+│       │           ├── ModernBlueTemplate.jsx
+│       │           ├── ProductDesignerTemplate.jsx
+│       │           └── index.jsx
+│       ├── context/
+│       │   └── AuthContext.jsx
+│       ├── data/
+│       │   ├── constants.js
+│       │   ├── employerDiscovery.js
+│       │   └── landingDemo.js
+│       ├── layouts/
+│       │   ├── AdminHeader.jsx
+│       │   ├── CandidateHeader.jsx
+│       │   ├── MainLayout.jsx
+│       │   ├── RecruiterHeader.jsx
+│       │   └── index.js
+│       ├── lib/
+│       │   └── api.js
+│       ├── pages/
+│       │   ├── AuthPage.jsx
+│       │   ├── HomePage.jsx
+│       │   ├── JobDetailPage.jsx
+│       │   ├── JobsPage.jsx
+│       │   ├── LandingPage.jsx
+│       │   ├── admin/
+│       │   │   ├── AdminDashboardPage.jsx
+│       │   │   ├── AdminLoginPage.jsx
+│       │   │   └── AdminUsersPage.jsx
+│       │   ├── candidate/
+│       │   │   ├── ApplicationsPage.jsx
+│       │   │   ├── EmployersPage.jsx
+│       │   │   ├── ParseCVPage.jsx
+│       │   │   ├── ProfilePage.jsx
+│       │   │   ├── ResumeBuilderPage.jsx
+│       │   │   ├── ResumeWorkspacePage.jsx
+│       │   │   ├── ResumesPage.jsx
+│       │   │   └── TemplatesPage.jsx
+│       │   └── recruiter/
+│       │       ├── ApplicationsPage.jsx
+│       │       ├── CompanyPage.jsx
+│       │       ├── CvScreeningPage.jsx
+│       │       ├── DashboardPage.jsx
+│       │       ├── JobEditorPage.jsx
+│       │       ├── JobsPage.jsx
+│       │       ├── ProfilePage.jsx
+│       │       └── jobWorkspaceData.js
+│       └── routes/
+│           └── index.js
+├── instance/
+│   └── uploads/
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── test_admin_applications_crud.py
+│   ├── test_admin_crud.py
+│   ├── test_admin_crud_jobs.py
+│   ├── test_admin_crud_user.py
+│   ├── test_admin_jobs.py
+│   ├── test_admin_statistics.py
+│   ├── test_admin_users.py
+│   ├── test_applications_routes.py
+│   ├── test_applications_service.py
+│   ├── test_auth_service.py
+│   ├── test_cv_parser_service.py
+│   ├── test_job_posting.py
+│   ├── test_job_recommendation_logic.py
+│   └── test_jobs_repository.py
+└── (excluded in this tree) local virtualenv + dependency/cache folders like venv/, node_modules/, __pycache__/

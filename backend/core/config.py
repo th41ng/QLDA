@@ -9,12 +9,30 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT_DIR / ".env")
 
 
+def normalize_database_url(url: str) -> str:
+    url = (url or "").strip()
+    if not url:
+        return url
+
+    # Some platforms still provide the legacy scheme.
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://") :]
+
+    # Prefer psycopg v3 driver to avoid psycopg2 build issues on newer Python.
+    if url.startswith("postgresql://") and "+" not in url.split("://", 1)[0]:
+        url = "postgresql+psycopg://" + url[len("postgresql://") :]
+
+    return url
+
+
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "jobportal-secret-key-change-me-to-a-long-random-string")
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jobportal-jwt-secret-key-change-me-to-a-long-random-string")
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
-        "postgresql://jobportal_user:JobPortal123%21@127.0.0.1:5432/job_portal",
+    SQLALCHEMY_DATABASE_URI = normalize_database_url(
+        os.getenv(
+            "DATABASE_URL",
+            "postgresql://jobportal_user:JobPortal123%21@127.0.0.1:5432/job_portal",
+        )
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JSON_SORT_KEYS = False
