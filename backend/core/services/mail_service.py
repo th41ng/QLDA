@@ -5,8 +5,36 @@ from ..extensions import mail
 
 
 def send_mail(subject: str, recipients: list[str], body: str, html: str | None = None) -> None:
-    message = Message(subject=subject, recipients=recipients, body=body, html=html)
-    mail.send(message)
+    cfg = current_app.config
+    mail_username = (cfg.get("MAIL_USERNAME") or "").strip()
+    mail_password_configured = bool((cfg.get("MAIL_PASSWORD") or "").strip())
+    mail_server = cfg.get("MAIL_SERVER")
+    mail_port = cfg.get("MAIL_PORT")
+    if not mail_username or not mail_password_configured:
+        raise RuntimeError("Mail is not configured (missing MAIL_USERNAME/MAIL_PASSWORD)")
+
+    message = Message(
+        subject=subject,
+        recipients=recipients,
+        body=body,
+        html=html,
+        sender=cfg.get("MAIL_DEFAULT_SENDER") or mail_username,
+    )
+    try:
+        mail.send(message)
+    except Exception:  # noqa: BLE001
+        current_app.logger.exception(
+            "Failed to send email via SMTP",
+            extra={
+                "smtp_server": mail_server,
+                "smtp_port": mail_port,
+                "smtp_tls": bool(cfg.get("MAIL_USE_TLS")),
+                "smtp_ssl": bool(cfg.get("MAIL_USE_SSL")),
+                "mail_username_set": bool(mail_username),
+                "recipients": recipients,
+            },
+        )
+        raise
 
 
 def send_otp_email(email: str, code: str, purpose: str) -> None:

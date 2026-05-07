@@ -54,9 +54,14 @@ class Config:
     MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
     MAIL_PORT = int(os.getenv("MAIL_PORT", 587))
     MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "true").lower() == "true"
+    MAIL_USE_SSL = os.getenv("MAIL_USE_SSL", "false").lower() == "true"
     MAIL_USERNAME = os.getenv("MAIL_USERNAME")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.getenv("MAIL_USERNAME")
+
+    # When true, include sanitized mail/OTP error details in JSON responses.
+    # Keep false in production unless actively debugging.
+    EXPOSE_MAIL_ERRORS = os.getenv("EXPOSE_MAIL_ERRORS", "false").lower() == "true"
     OTP_EXPIRES_MINUTES = int(os.getenv("OTP_EXPIRES_MINUTES", 5))
     OTP_RESEND_SECONDS = int(os.getenv("OTP_RESEND_SECONDS", 60))
     OTP_MAX_ATTEMPTS = int(os.getenv("OTP_MAX_ATTEMPTS", 5))
