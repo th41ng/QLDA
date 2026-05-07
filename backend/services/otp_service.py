@@ -116,9 +116,15 @@ def send_otp_request(
     try:
         send_otp_email(email, code, purpose)
     except Exception as exc:  # noqa: BLE001
+        current_app.logger.exception("Failed to send OTP email")
         db.session.delete(record)
         db.session.commit()
-        raise OtpServiceError("Không thể gửi email OTP. Vui lòng thử lại.", 502) from exc
+
+        extra: dict[str, Any] = {"mailError": type(exc).__name__}
+        if current_app.config.get("EXPOSE_MAIL_ERRORS") or current_app.debug:
+            extra["mailErrorDetail"] = str(exc)
+
+        raise OtpServiceError("Không thể gửi email OTP. Vui lòng thử lại.", 502, **extra) from exc
 
     return OtpSendResult(
         email=email,
